@@ -1,7 +1,7 @@
 //Todd Mills
 //Unit 8 case problems
 //This program makes multiple event objects, gets data for each, and prints the bill
-//Updated for phone numbers
+//Updated for phone numbers and VCS
 import java.util.Scanner;
 public class EventDemo{
 

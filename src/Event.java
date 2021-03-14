@@ -1,7 +1,6 @@
 //Todd Mills
 //Unit 8 Case Problems
 //This class holds event class data for Carly's Catering Event Demo
-//Updated for VCS
 public class Event {
 
 	public static final String[] eventType = {"Wedding", "Baptism", "Birthday", "Corporate", "Other"};

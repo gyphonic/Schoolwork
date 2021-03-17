@@ -18,8 +18,8 @@ public class RentalDemo {
 		}
 		//Close the Scanner
 		input.close();
-		//Prints the motto, calls from SammysRentalPriceWithMethods.java
-		SammysRentalPriceWithMethods.printMotto();
+		//Print the banner/motto for Sammy's Rentals
+		printMotto();
 		//Get the results and print the bill to console for each rental
 		for ( int i = 0; i < numRentals; i++) {
 			printResults(rentals[i]);
@@ -76,5 +76,11 @@ public class RentalDemo {
 		System.out.println("The billable rental time is " + rental.getRentalHours() + " hours and " +
 				rental.getMinutesOverHour() + " minutes.");
 		System.out.println("The total cost for the rental is $" + rental.getRentalPrice() + ".");
+	}
+	//This method prints the motto for Sammy's Rentals
+	public static void printMotto() {
+		System.out.println("\nSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
+		System.out.println("Sammy's makes it fun in the sun.");
+		System.out.println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
 	}
 }

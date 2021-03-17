@@ -19,8 +19,8 @@ public class EventDemo{
 		}
 		//Close the Scanner
 		input.close();
-		//Prints the motto, calls from CarlysEventPriceWithMethods.java
-		CarlysEventPriceWithMethods.printMotto();
+		//Prints the motto/banner for Carly's Catering
+		printMotto();
 		//Print the final bills for each Event object
 		for (int i = 0; i < numEvents; i++) {
 			printDetails(events[i]);
@@ -78,5 +78,11 @@ public class EventDemo{
 			System.out.println("Event is a small event");
 		}
 		System.out.println("Price for the event is $" + event.getEventPrice());
+	}
+	//This method prints the motto for Carly's Catering
+	public static void printMotto() {
+		System.out.println("********************************************");
+		System.out.println("Carly's makes the food that makes it a party.");
+		System.out.println("********************************************");
 	}
 }

@@ -1,6 +1,7 @@
 //Todd Mills
 //Unit 8 Case Problems
 //This class holds event class data for Carly's Catering Event Demo
+import java.util.Random;
 public class Event {
 
 	public static final String[] eventType = {"Wedding", "Baptism", "Birthday", "Corporate", "Other"};
@@ -27,6 +28,27 @@ public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInp
 		setPhoneNumber(phoneInput);
 		setEventType(eventTypeInput);
 	}
+	//Method to auto randomize event information (I am tired of typing unique information)
+	public void randomizeEvent() {
+		//Create new Random instance
+		Random rand = new Random();
+		//Random phone number with 501 area code
+		String randomPhone = ("501" + String.valueOf(rand.nextInt(9999999)));
+		//Random number of guests (6 - 99)
+		int randomGuests = (6 + rand.nextInt(93));
+		//Random event type
+		int randomEventType = rand.nextInt(4);
+		//And this nonsense is to randomize eventnums
+		char[] eventChars = {'A', 'B', 'C', 'D', 'E', 'F', 'H', 'I', 'J'};
+		int randomEventDigits = (100 + rand.nextInt(899));
+		String randomEventNum = (eventChars[rand.nextInt(8)] + String.valueOf(randomEventDigits));
+		//Set the random values
+		setGuests(randomGuests);
+		setEventNumber(randomEventNum);
+		setPhoneNumber(randomPhone);
+		setEventType(randomEventType);
+	}
+
 	//Class methods for getting and setting event number, number of guests, and price
 	//This method sets the number of guests, and uses a higher price for small events
 	public void setGuests(int numGuests) {

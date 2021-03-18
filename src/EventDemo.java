@@ -12,10 +12,28 @@ public class EventDemo{
 		System.out.println("How many events would you like to enter?");
 		int numEvents = input.nextInt();
 		Event[] events = new Event[numEvents];
-		for (int i = 0; i < numEvents; i++) {
-			System.out.println("Enter the details for event no# " + (i + 1));
-			events[i] = new Event(getEventNumber(input), getNumberOfGuests(input), getPhoneNumber(input),
-					getEventType(input));
+		//Randomize event data option
+		boolean randomChoice = false;
+		while (randomChoice == false) {
+			System.out.println("Randomize event data? Y or N");
+			String randomizerInput = input.next();
+			//If Y, randomize event data
+			if (randomizerInput.equals("Y")) {
+				for (int i = 0; i < numEvents; i++) {
+					events[i] = new Event();
+					events[i].randomizeEvent();
+				}
+				randomChoice = true;
+			}
+			//If user does not want to randomize
+			if (randomizerInput.equals("N")) {
+				for (int i = 0; i < numEvents; i++) {
+					System.out.println("Enter the details for event no# " + (i + 1));
+					events[i] = new Event(getEventNumber(input), getNumberOfGuests(input), getPhoneNumber(input),
+							getEventType(input));
+				}
+			randomChoice = true;
+			}
 		}
 		//Close the Scanner
 		input.close();

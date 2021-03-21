@@ -74,7 +74,7 @@ public class EventDemo{
 			//Check if user enter less than 5 guests
 			if (numOfGuests < 5) {
 				System.out.println("Too few guests!");
-				//Check if user entered more than 100 guests
+			//Check if user entered more than 100 guests
 			} else if (numOfGuests > 100) {
 				System.out.println("Too many guests!");
 			} else {

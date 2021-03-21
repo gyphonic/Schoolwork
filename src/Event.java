@@ -22,7 +22,7 @@ public class Event {
 		setPhoneNumber("0000000000");
 		setEventType(0);
 	}
-public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInput) {
+	public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInput) {
 		setGuests(numGuests);
 		setEventNumber(eventNum);
 		setPhoneNumber(phoneInput);
@@ -97,7 +97,8 @@ public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInp
 		boolean isValidEventNum = false;
 		eventNum = eventNum.toUpperCase();
 		if (Character.isLetter(eventNum.charAt(0)) && Character.isDigit(eventNum.charAt(1)) && 
-				Character.isDigit(eventNum.charAt(2)) && Character.isDigit(eventNum.charAt(3)) && isValidEventNum == false) {
+				Character.isDigit(eventNum.charAt(2)) && Character.isDigit(eventNum.charAt(3)) &&
+				isValidEventNum == false) {
 			isValidEventNum = true;
 		} 
 		if (isValidEventNum == true) {
@@ -109,6 +110,10 @@ public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInp
 	public String getEventNumber() {
 		return eventNumber;
 	}
+	//This method converts the event number into a numerical value for sorting
+	public int getEventNumberInt() {
+		String eventDigits = eventNumber.substring(0);
+	}
 	public int getNumberOfGuests() {
 		return numberOfGuests;
 	}
@@ -119,8 +124,12 @@ public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInp
 		return pricePerGuest;
 	}
 	//This method converts the int eventType into a string corresponding to the eventType array
-	public String getEventType () {
+	public String getEventType() {
 		return eventType[eventTypeInt];
+	}
+	//This method returns the int eventType for sorting
+	public int getEventTypeInt() {
+		return eventTypeInt;
 	}
 	//This method formats the phone number into a normal format
 	public String getPhoneNum() {

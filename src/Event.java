@@ -23,8 +23,8 @@ public class Event {
 		setEventType(0);
 	}
 	public Event(String eventNum, int numGuests, String phoneInput, int eventTypeInput) {
-		setGuests(numGuests);
 		setEventNumber(eventNum);
+		setGuests(numGuests);
 		setPhoneNumber(phoneInput);
 		setEventType(eventTypeInput);
 	}

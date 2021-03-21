@@ -1,11 +1,11 @@
 //Todd Mills
-//Unit 8 Case Problems
+//Unit 9 Case Problems
 //This class holds data for the Rental object for Sammys Rentals Rental Demo
+import java.util.Random;
 public class Rental {
 
 	public static final String[] equipTypes = {"Personal Watercraft", "Pontoon Boat", "Rowboat", "Canoe", "Kayak",
 								"Beach Chair", "Umbrella", "Other"};
-	public static final int minutesPerHour = 60;
 	public static final int rentalRate = 40;
 	private int equipTypeInt;
 	private String contractNumber;
@@ -27,6 +27,26 @@ public class Rental {
 		setHoursAndMinutes(rentalTimeInput);
 		setPhoneNumber(phoneInput);
 		setEquipType(equipTypeInput);
+	}
+	//Method to autofill rental data
+	public void randomizeRental() {
+		//Create new Random instance
+		Random rand = new Random();
+		//Random phone number with 501 area code
+		String randomPhone = ("501" + String.valueOf(rand.nextInt(9999999)));
+		//Random rental time (1 - 3 hrs)
+		int randomTime = (60 + rand.nextInt(120));
+		//Random equipment type
+		int randomEquipType = rand.nextInt(7);
+		//And this nonsense is to randomize rental numbers
+		char[] contractChars = {'A', 'B', 'C', 'D', 'E', 'F', 'H', 'I', 'J'};
+		int randomContractDigits = (100 + rand.nextInt(899));
+		String randomContractNum = (contractChars[rand.nextInt(8)] + String.valueOf(randomContractDigits));
+		//Set the random values
+		setContractNumber(randomContractNum);
+		setHoursAndMinutes(randomTime);
+		setPhoneNumber(randomPhone);
+		setEquipType(randomEquipType);
 	}
 	//Class methods for setting contract number, time, and final price
 	//This method sets the contract number
@@ -113,7 +133,12 @@ public class Rental {
 	public String getContractNumber() {
 		return contractNumber;
 	}
+	//returns the equipment type
 	public String getEquipType() {
 		return equipTypes[equipTypeInt];
+	}
+	//returns the int value for equip type, for sorting
+	public int getEquipTypeInt() {
+		return equipTypeInt;
 	}
 }

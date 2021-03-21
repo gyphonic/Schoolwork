@@ -1,5 +1,5 @@
 //Todd Mills
-//Unit 8 Case Problems
+//Unit 9 Case Problems
 //This class holds event class data for Carly's Catering Event Demo
 import java.util.Random;
 public class Event {
@@ -109,10 +109,6 @@ public class Event {
 	}
 	public String getEventNumber() {
 		return eventNumber;
-	}
-	//This method converts the event number into a numerical value for sorting
-	public int getEventNumberInt() {
-		String eventDigits = eventNumber.substring(0);
 	}
 	public int getNumberOfGuests() {
 		return numberOfGuests;

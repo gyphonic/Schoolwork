@@ -41,13 +41,20 @@ public class EventDemo{
 		for (int i = 0; i < numEvents; i++) {
 			printDetails(events[i]);
 		}
-		System.out.println("Would you like to sort events? Y or N");
+		//Ask if the user would like to sort event data
+		System.out.println("\nWould you like to sort events? Y or N");
 		String sortInput = input.next();
 		if (sortInput.equals("Y")) {
-			sortEvents(input, events);
+			boolean keepSorting = true;
+			System.out.println("\nSorting events");
+			while (keepSorting) {
+				keepSorting = sortEvents(input, events);
+			}
 		}
 		//Close the Scanner
 		input.close();
+		//Print closing message
+		System.out.println("~~~~~~Closing program~~~~~~");
 	}
 
 	//Class methods
@@ -111,35 +118,110 @@ public class EventDemo{
 		}
 		System.out.println("Price for the event is $" + event.getEventPrice());
 	}
-
-	public static void sortEvents(Scanner input, Event[] events) {
-		System.out.println("Sorting events");
-		System.out.println("Sort by event number = 1\nSort by guests = 2\nSort by event type = 3\nCancel = 0");
+	//Method for sorting event data
+	public static boolean sortEvents(Scanner input, Event[] events) {
+		System.out.println("Sort by event number = 1 Sort by guests = 2 Sort by event type = 3 Cancel = 0");
 		String sortType = input.next();
-		switch (sortType) {
-			case "1":
-				System.out.println("Sort by event number");
-				for (int i = 0; i < (events.length -1); i++) {
-
-				}
-			case "2":
-				System.out.println("Sort by number of guests");
-				int[] eventGuests;
-				for (int i = 0; i < (events.length - 1); i++) {
-					int event1 = events[i].getNumberOfGuests();
-					int event2 = events[(i+ 1)].getNumberOfGuests();
-					if (event1 > event2) {
-
+		//Sort by event number
+		if (sortType.equals("1")) {
+			System.out.println("Sort by event number");
+			String[] eventNumArray = new String[events.length];
+			String tempNum;
+			//Display initial data and clone to another array for sorting
+			for (int i = 0; i < (events.length -1); i++) {
+				System.out.println("Event no# " + events[i].getEventNumber());
+				eventNumArray[i] = events[i].getEventNumber();
+			}
+			//Bubble sort event numbers
+			for (int x = 0; x < eventNumArray.length; x++) {
+				for (int i = 1; i < (eventNumArray.length - 1); i++) {
+					if (eventNumArray[i - 1].compareTo(eventNumArray[i]) > 0) {
+						tempNum = eventNumArray[i];
+						eventNumArray[i] = eventNumArray[(i - 1)];
+						eventNumArray[( i - 1)] = tempNum;
 					}
 				}
-
-			case "3":
-				System.out.println("Sort by event type");
-				for (int i = 0; i < (events.length -1); i++) {
-
-				}
-			case "0":
-				break;
+			}
+			//Display the sorted data
+			System.out.println("\nEvents sorted by event number.");
+			for (int i = 0; i < (eventNumArray.length - 1); i++) {
+				System.out.println("Event no# " + eventNumArray[i]);
+			}
+			return true;
 		}
+		//Sort by number of guests
+		if (sortType.equals("2")) {
+			System.out.println("Sort by number of guests");
+			int[] eventGuestsArray = new int[events.length];
+			String[] eventGuestsNumArray = new String[events.length];
+			int tempGuests;
+			String tempGuestsNum;
+			//Display initial data and clone to another array for sorting
+			for (int i = 0; i < (events.length - 1); i++) {
+				System.out.println(events[i].getEventNumber() + " has " + events[i].getNumberOfGuests() +
+						" guests.");
+				eventGuestsArray[i] = events[i].getNumberOfGuests();
+				eventGuestsNumArray[i] = events[i].getEventNumber();
+			}
+			//Bubble sort event guest amounts and event numbers
+			for (int x = 0; x < eventGuestsArray.length; x++){
+				for (int i = 1; i < (eventGuestsArray.length - 1); i++) {
+					if (eventGuestsArray[(i - 1)] > eventGuestsArray[(i)]) {
+						tempGuests = eventGuestsArray[i];
+						eventGuestsArray[i] = eventGuestsArray[(i - 1)];
+						eventGuestsArray[(i - 1)] = tempGuests;
+						tempGuestsNum = eventGuestsNumArray[i];
+						eventGuestsNumArray[i] = eventGuestsNumArray[(i - 1)];
+						eventGuestsNumArray[(i - 1)] = tempGuestsNum;
+					}
+				}
+			}
+			//Display the sorted data
+			System.out.println("\nEvents sorted by number of guests.");
+			for (int i = 0; i < (eventGuestsArray.length - 1); i++) {
+				System.out.println(eventGuestsNumArray[i] + " has " + eventGuestsArray[i] + " guests");
+			}
+			return true;
+		}
+		//Sort by event type integer
+		if (sortType.equals("3")) {
+			System.out.println("Sort by event type");
+			int[] eventTypeArray = new int[events.length];
+			String[] eventTypeNumArray = new String[events.length];
+			int tempType;
+			String tempTypeNum;
+			//Display initial data and clone to another array for sorting
+			for (int i = 0; i < (events.length -1); i++) {
+				System.out.println(events[i].getEventNumber() + " is a " + events[i].getEventType() + " event.");
+				eventTypeArray[i] = events[i].getEventTypeInt();
+				eventTypeNumArray[i] = events[i].getEventNumber();
+			}
+			//Bubble sort event types and event numbers
+			for (int x = 0; x < eventTypeArray.length; x++) {
+				for (int i = 1; i < (eventTypeArray.length - 1); i++) {
+					if (eventTypeArray[i - 1] > eventTypeArray[i]) {
+						tempType = eventTypeArray[i];
+						eventTypeArray[i] = eventTypeArray[(i - 1)];
+						eventTypeArray[(i - 1)] = tempType;
+						tempTypeNum = eventTypeNumArray[i];
+						eventTypeNumArray[i] = eventTypeNumArray[(i - 1)];
+						eventTypeNumArray[(i - 1)] = tempTypeNum;
+					}
+				}
+			}
+			//Display the sorted data
+			System.out.println("Events sorted by event type");
+			for (int i = 0; i < (eventTypeArray.length - 1); i++) {
+				System.out.println(eventTypeNumArray[i] + " is a " + Event.eventType[eventTypeArray[i]] + " event");
+			}
+			return true;
+		}
+		//Quit sorting
+		if (sortType.equals("0")) {
+			return false;
+		} else {
+			return true;
+		}
+
 	}
 }

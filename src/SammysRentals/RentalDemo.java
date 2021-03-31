@@ -1,6 +1,7 @@
 package SammysRentals;//Todd Mills
-//Unit 8 Case Problems
+//Unit 10 Case Problems
 //This class creates 3 rental objects, displays their information, and compares sizes
+//Updated for the LessonWithRental Class
 import java.util.Scanner;
 public class RentalDemo {
 
@@ -10,8 +11,18 @@ public class RentalDemo {
 		//Create rental objects based on user input
 		System.out.println("How many rentals would you like to enter?");
 		int numRentals = input.nextInt();
-		Rental[] rentals = new Rental[numRentals];
+		LessonWithRental[] rentals = new LessonWithRental[numRentals];
+		for (int i = 0; i < numRentals; i++) {
+			System.out.println("Enter details for rental no# " + (i + 1));
+			rentals[i] = new LessonWithRental(enterContractNumber(input), enterRentalTimeInput(input),
+					enterEquipType(input));
+		}
 		//Option to autofill data
+		/*for (int i = 0; i < numRentals; i++) {
+			System.out.println("Enter details for rental no# " + (i + 1));
+			rentals[i] = new LessonWithRental(enterContractNumber(input), enterRentalTimeInput(input),
+					enterEquipType(input), enterPhoneNumber(input));
+		}
 		boolean autofillOptionChosen = false;
 		while (!autofillOptionChosen) {
 			System.out.println("Autofill rental data? Y or N");
@@ -27,11 +38,11 @@ public class RentalDemo {
 			if (autofillChoice.equals("N")) {
 				for (int i = 0; i < numRentals; i++) {
 					System.out.println("Enter details for rental no# " + (i + 1));
-					rentals[i] = new Rental(enterContractNumber(input), enterEquipType(input), enterRentalTimeInput(input),
-							enterPhoneNumber(input));
+					rentals[i] = new Rental(enterContractNumber(input), enterRentalTimeInput(input),
+							enterEquipType(input), enterPhoneNumber(input));
 				}
 			}
-		}
+		}*/
 		//Print the banner/motto for Sammy's Rentals
 		printMotto();
 		//Get the results and print the bill to console for each rental
@@ -78,10 +89,10 @@ public class RentalDemo {
 			rentalTimeInput = input.nextInt();
 			//Checks if the user entered less than 60 minutes
 			if (rentalTimeInput < 60) {
-				System.out.println("SammysRentals.Rental too short!");
+				System.out.println("Rental too short!");
 			//Checks if the user entered more than 7200 minutes
 			} else if (rentalTimeInput > 7200) {
-				System.out.println("SammysRentals.Rental too long!");
+				System.out.println("Rental too long!");
 			} else {
 				break;
 			}
@@ -96,16 +107,17 @@ public class RentalDemo {
 		return phoneInput;
 	}
 	//This method prints the final bill for the rental
-	public static void printResults(Rental rental) {
+	public static void printResults(LessonWithRental rental) {
 		System.out.println("\nContract #" + rental.getContractNumber());
 		System.out.println("Equipment rented = " + rental.getEquipType());
-		System.out.println("Phone number - " + rental.getPhoneNumber());
-		System.out.println("SammysRentals.Rental price is $" + rental.getRentalRate() +
+		//System.out.println("Phone number - " + rental.getPhoneNumber());
+		System.out.println("Rental price is $" + rental.getRentalRate() +
 				" per hour, and $1 for each additional minute, up to 40.");
 		System.out.println("The total rental time is " + rental.getTotalTime() + " minutes.");
 		System.out.println("The billable rental time is " + rental.getRentalHours() + " hours and " +
 				rental.getMinutesOverHour() + " minutes.");
 		System.out.println("The total cost for the rental is $" + rental.getRentalPrice() + ".");
+		System.out.println(rental.getInstructor());
 	}
 	//This method prints the motto for Sammy's Rentals
 	public static void printMotto() {
@@ -115,7 +127,7 @@ public class RentalDemo {
 	}
 	//Method for sorting rental data
 	public static boolean sortRentals(Scanner input, Rental[] rentals) {
-		System.out.println("\nSort by contract number = 1 Sort by rental time = 2 Sort by equipment type = 3 Cancel = 0");
+		System.out.println("\nSort by contract number = 1 Sort by rental price = 2 Sort by equipment type = 3 Cancel = 0");
 		String sortType = input.next();
 		//Sort by contract number
 		if (sortType.equals("1")) {
@@ -123,8 +135,8 @@ public class RentalDemo {
 			String[] rentalNumArray = new String[rentals.length];
 			String tempNum;
 			//Display initial data and clone to another array for sorting
-			for (int i = 0; i < (rentals.length -1); i++) {
-				System.out.println("SammysRentals.Rental no# " + rentals[i].getContractNumber());
+			for (int i = 0; i < rentals.length; i++) {
+				System.out.println("Rental no# " + rentals[i].getContractNumber());
 				rentalNumArray[i] = rentals[i].getContractNumber();
 			}
 			//Bubble sort contract numbers
@@ -139,42 +151,41 @@ public class RentalDemo {
 			}
 			//Display the sorted data
 			System.out.println("\nRentals sorted by contract number.");
-			for (int i = 0; i < (rentalNumArray.length - 1); i++) {
-				System.out.println("SammysRentals.Rental no# " + rentalNumArray[i]);
+			for (int i = 0; i < rentalNumArray.length; i++) {
+				System.out.println("Rental no# " + rentalNumArray[i]);
 			}
 			return true;
 		}
-		//Sort by rental time
+		//Sort by rental price
 		if (sortType.equals("2")) {
-			System.out.println("Sort by rental time");
-			int[] rentalTimeArray = new int[rentals.length];
-			String[] rentalTimeNumArray = new String[rentals.length];
-			int tempTime;
-			String tempTimeNum;
+			System.out.println("Sort by rental price");
+			int[] rentalPriceArray = new int[rentals.length];
+			String[] rentalPriceNumArray = new String[rentals.length];
+			int tempPrice;
+			String tempPriceNum;
 			//Display initial data and clone to another array for sorting
-			for (int i = 0; i < (rentals.length - 1); i++) {
-				System.out.println(rentals[i].getContractNumber() + " is " + rentals[i].getTotalTime() +
-						" minutes");
-				rentalTimeArray[i] = rentals[i].getTotalTime();
-				rentalTimeNumArray[i] = rentals[i].getContractNumber();
+			for (int i = 0; i < rentals.length; i++) {
+				System.out.println(rentals[i].getContractNumber() + " costs $" + rentals[i].getRentalPrice());
+				rentalPriceArray[i] = rentals[i].getRentalPrice();
+				rentalPriceNumArray[i] = rentals[i].getContractNumber();
 			}
 			//Bubble sort rental time and contract numbers
-			for (int x = 0; x < rentalTimeArray.length; x++){
-				for (int i = 1; i < (rentalTimeArray.length - 1); i++) {
-					if (rentalTimeArray[(i - 1)] > rentalTimeArray[(i)]) {
-						tempTime = rentalTimeArray[i];
-						rentalTimeArray[i] = rentalTimeArray[(i - 1)];
-						rentalTimeArray[(i - 1)] = tempTime;
-						tempTimeNum = rentalTimeNumArray[i];
-						rentalTimeNumArray[i] = rentalTimeNumArray[(i - 1)];
-						rentalTimeNumArray[(i - 1)] = tempTimeNum;
+			for (int x = 0; x < rentalPriceArray.length; x++){
+				for (int i = 1; i < rentalPriceArray.length; i++) {
+					if (rentalPriceArray[(i - 1)] > rentalPriceArray[(i)]) {
+						tempPrice = rentalPriceArray[i];
+						rentalPriceArray[i] = rentalPriceArray[(i - 1)];
+						rentalPriceArray[(i - 1)] = tempPrice;
+						tempPriceNum = rentalPriceNumArray[i];
+						rentalPriceNumArray[i] = rentalPriceNumArray[(i - 1)];
+						rentalPriceNumArray[(i - 1)] = tempPriceNum;
 					}
 				}
 			}
 			//Display the sorted data
-			System.out.println("\nRentals sorted by rental time.");
-			for (int i = 0; i < (rentalTimeArray.length - 1); i++) {
-				System.out.println(rentalTimeNumArray[i] + " is " + rentalTimeArray[i] + " minutes.");
+			System.out.println("\nRentals sorted by rental price.");
+			for (int i = 0; i < rentalPriceArray.length; i++) {
+				System.out.println(rentalPriceNumArray[i] + " cost $ " + rentalPriceArray[i]);
 			}
 			return true;
 		}
@@ -186,7 +197,7 @@ public class RentalDemo {
 			int tempType;
 			String tempTypeNum;
 			//Display initial data and clone to another array for sorting
-			for (int i = 0; i < (rentals.length -1); i++) {
+			for (int i = 0; i < rentals.length; i++) {
 				System.out.println(rentals[i].getContractNumber() + " is a " + rentals[i].getEquipType() + " rental.");
 				equipTypeArray[i] = rentals[i].getEquipTypeInt();
 				equipTypeNumArray[i] = rentals[i].getContractNumber();
@@ -206,7 +217,7 @@ public class RentalDemo {
 			}
 			//Display the sorted data
 			System.out.println("\nRentals sorted by equipment type");
-			for (int i = 0; i < (equipTypeArray.length - 1); i++) {
+			for (int i = 0; i < equipTypeArray.length; i++) {
 				System.out.println(equipTypeNumArray[i] + " is a " + Rental.equipTypes[equipTypeArray[i]] + " rental.");
 			}
 			return true;

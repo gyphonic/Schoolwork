@@ -53,7 +53,7 @@ public class Event {
 	//This method sets the number of guests, and uses a higher price for small events
 	public void setGuests(int numGuests) {
 		numberOfGuests = numGuests;
-		if (isLargeEvent(numberOfGuests) == true) {
+		if (isLargeEvent() == true) {
 			eventPrice = numberOfGuests * lowPrice;
 			pricePerGuest = lowPrice;
 		} else {
@@ -62,8 +62,8 @@ public class Event {
 		}
 	}
 	//This method checks to see if the event qualifies as a large event (more than 50 guests)
-	public boolean isLargeEvent(int numberOfGuests) {
-		if (numberOfGuests >=cutOffValue) {
+	public boolean isLargeEvent() {
+		if (numberOfGuests >= cutOffValue) {
 			return true;
 		} else {
 			return false;

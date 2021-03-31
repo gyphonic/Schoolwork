@@ -1,9 +1,9 @@
 package SammysRentals;//Todd Mills
-//Unit 9 Case Problems
-//This class holds data for the SammysRentals.Rental object for Sammys Rentals SammysRentals.Rental Demo
+//Unit 10 Case Problems
+//This class holds data for the Rental object for Sammys Rentals Demo
 import java.util.Random;
 public class Rental {
-
+	//Class data fields
 	public static final String[] equipTypes = {"Personal Watercraft", "Pontoon Boat", "Rowboat", "Canoe", "Kayak",
 								"Beach Chair", "Umbrella", "Other"};
 	public static final int rentalRate = 40;
@@ -19,14 +19,14 @@ public class Rental {
 	public Rental() {
 		setContractNumber("A000");
 		setHoursAndMinutes(0);
-		setPhoneNumber("0000000000");
-		setEquipType(7);
+		//setPhoneNumber("0000000000");
+		//setEquipType(7);
 	}
-	public Rental(String contractNum, int equipTypeInput, int rentalTimeInput, String phoneInput) {
+	public Rental(String contractNum, int rentalTimeInput /*int equipTypeInput, String phoneInput*/) {
 		setContractNumber(contractNum);
 		setHoursAndMinutes(rentalTimeInput);
-		setPhoneNumber(phoneInput);
-		setEquipType(equipTypeInput);
+		//setPhoneNumber(phoneInput);
+		//setEquipType(equipTypeInput);
 	}
 	//Method to autofill rental data
 	public void randomizeRental() {

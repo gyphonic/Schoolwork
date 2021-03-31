@@ -1,54 +1,121 @@
 package CarlysCatering;//Todd Mills
-//Unit 9 case problems
+//Unit 10 case problems
 //This program makes multiple event objects, gets data for each, and prints the bill
-//Updated for autofill and bubble sorting
+//Updated for DinnerEvent class
 import java.util.Scanner;
 public class EventDemo{
 
 	public static void main(String[] args) {
 		//Create a new Scanner
 		Scanner input = new Scanner(System.in);
-		//Create events and ask the user for their information
-		System.out.println("How many events would you like to enter?");
-		int numEvents = input.nextInt();
-		Event[] events = new Event[numEvents];
-		//Randomize event data option
-		boolean autofillOptionChosen = false;
-		while (!autofillOptionChosen) {
-			System.out.println("Autofill event data? Y or N");
-			String autofillChoice = input.next();
-			//If Y, randomize event data
-			if (autofillChoice.equals("Y")) {
-				for (int i = 0; i < numEvents; i++) {
-					events[i] = new Event();
-					events[i].randomizeEvent();
+		//Ask if user wants to enter simple events or dinner events
+		System.out.println("Would you like to enter simple events or dinner events?");
+		boolean eventTypeChosen = false;
+		while (!eventTypeChosen) {
+			System.out.println("Simple events = 0, Dinner Events = 1");
+			int eventType = input.nextInt();
+			//Simple Events
+			if (eventType == 0) {
+				//Create events and ask the user for their information
+				System.out.println("How many events would you like to enter?");
+				int numEvents = input.nextInt();
+				Event[] events = new Event[numEvents];
+				//Randomize event data option
+				boolean autofillOptionChosen = false;
+				while (!autofillOptionChosen) {
+					System.out.println("Autofill event data? Y or N");
+					String autofillChoice = input.next();
+					//If Y, randomize event data
+					if (autofillChoice.equals("Y")) {
+						for (int i = 0; i < numEvents; i++) {
+							events[i] = new Event();
+							events[i].randomizeEvent();
+						}
+						autofillOptionChosen = true;
+					}
+					//If user does not want to randomize
+					if (autofillChoice.equals("N")) {
+						for (int i = 0; i < numEvents; i++) {
+							System.out.println("Enter the details for event no# " + (i + 1));
+							events[i] = new Event(getEventNumber(input), getNumberOfGuests(input), getPhoneNumber(input),
+									getEventType(input));
+						}
+						autofillOptionChosen = true;
+					}
 				}
-				autofillOptionChosen = true;
-			}
-			//If user does not want to randomize
-			if (autofillChoice.equals("N")) {
+				//Prints the motto/banner for Carly's Catering
+				printMotto();
+				//Print the final bills for each Event object
 				for (int i = 0; i < numEvents; i++) {
-					System.out.println("Enter the details for event no# " + (i + 1));
-					events[i] = new Event(getEventNumber(input), getNumberOfGuests(input), getPhoneNumber(input),
-							getEventType(input));
+					printDetails(events[i]);
 				}
-				autofillOptionChosen = true;
+				//Ask if the user would like to sort event data
+				System.out.println("\nWould you like to sort events? Y or N");
+				String sortInput = input.next();
+				if (sortInput.equals("Y")) {
+					boolean keepSorting = true;
+					System.out.println("\nSorting events");
+					while (keepSorting) {
+						keepSorting = sortEvents(input, events);
+					}
+				}
+				eventTypeChosen = true;
 			}
-		}
-		//Prints the motto/banner for Carly's Catering
-		printMotto();
-		//Print the final bills for each CarlysCatering.Event object
-		for (int i = 0; i < numEvents; i++) {
-			printDetails(events[i]);
-		}
-		//Ask if the user would like to sort event data
-		System.out.println("\nWould you like to sort events? Y or N");
-		String sortInput = input.next();
-		if (sortInput.equals("Y")) {
-			boolean keepSorting = true;
-			System.out.println("\nSorting events");
-			while (keepSorting) {
-				keepSorting = sortEvents(input, events);
+			//Dinner Events
+			if (eventType == 1) {
+				//Create events and ask the user for their information
+				System.out.println("How many dinner events would you like to enter?");
+				int numEvents = input.nextInt();
+				DinnerEvent[] events = new DinnerEvent[numEvents];
+				//Randomize event data option
+				boolean autofillOptionChosen = false;
+				while (!autofillOptionChosen) {
+					System.out.println("Autofill dinner event data? Y or N");
+					String autofillChoice = input.next();
+					//If Y, randomize dinner event data
+					if (autofillChoice.equals("Y")) {
+						for (int i = 0; i < numEvents; i++) {
+							events[i] = new DinnerEvent();
+							events[i].randomizeDinnerEvent();
+						}
+						autofillOptionChosen = true;
+					}
+					//If user does not want to randomize
+					if (autofillChoice.equals("N")) {
+						for (int i = 0; i < numEvents; i++) {
+							System.out.println("Enter the details for event no# " + (i + 1));
+							String eventNum = getEventNumber(input);
+							int guestsNum = getNumberOfGuests(input);
+							String phoneNum = getPhoneNumber(input);
+							int eventTypeInput = getEventType(input);
+							int entreeNum = getEntreeInput(input);
+							int side1Num = getSide1Input(input);
+							int side2Num = getSide2Input(input, side1Num);
+							int dessertNum = getDessertInput(input);
+							events[i] = new DinnerEvent(eventNum, guestsNum, phoneNum, eventTypeInput, entreeNum, side1Num,
+									side2Num, dessertNum);
+						}
+						autofillOptionChosen = true;
+					}
+				}
+				//Prints the motto/banner for Carly's Catering
+				printMotto();
+				//Print the final bills for each Event object
+				for (int i = 0; i < numEvents; i++) {
+					printDinnerDetails(events[i]);
+					getMenu(events[i]);
+				}
+				//Ask if the user would like to sort event data
+				System.out.println("\nWould you like to sort events? Y or N");
+				String sortInput = input.next();
+				if (sortInput.equals("Y")) {
+					boolean keepSorting = true;
+					System.out.println("\nSorting events");
+					while (keepSorting) {
+						keepSorting = sortEvents(input, events);
+					}
+				}
+				eventTypeChosen = true;
 			}
 		}
 		//Close the Scanner
@@ -61,8 +128,7 @@ public class EventDemo{
 	//This method prompts the user for the event number
 	public static String getEventNumber(Scanner input) {
 		System.out.println("Enter the event number.");
-		String eventNum = input.next();
-		return eventNum;
+		return input.next();
 	}
 	//This method prompts the user for number of guests
 	public static int getNumberOfGuests(Scanner input) {
@@ -86,23 +152,102 @@ public class EventDemo{
 	//This method prompts the user for a contact phone number
 	public static String getPhoneNumber(Scanner input) {
 		System.out.println("Enter a phone number.");
-		String phoneNum = input.next();
-		return phoneNum;
+		return input.next();
 	}
 	public static int getEventType(Scanner input) {
 		System.out.println("Enter an no# for the type of event.\nWedding = 0, Baptism = 1, " +
 				"\nBirthday = 2, Corporate = 3,\nOther = 4");
-		int eventTypeInput = input.nextInt();
-		return eventTypeInput;
+		return input.nextInt();
 	}
-
+	//Method to get the type of entree for dinner events
+	public static int getEntreeInput(Scanner input) {
+		boolean entreeChosen = false;
+		int entreeInput = 9;
+		while (!entreeChosen) {
+			System.out.println("Enter a no# for entree choice\nSteak = 0, Cheeseburgers = 1, Salmon = 2," +
+					"\nPizza = 3, Chicken = 4, Pasta = 5");
+			entreeInput = input.nextInt();
+			if (entreeInput >= 0 && entreeInput < 6){
+				entreeChosen = true;
+			}
+		}
+		return entreeInput;
+	}
+	//Method to get side1 for dinner events
+	public static int getSide1Input(Scanner input) {
+		boolean sideChosen = false;
+		int side1Input = 9;
+		while (!sideChosen) {
+			System.out.println("Enter a no# for first side choice\nMacaroni = 0, Ceaser salad = 1, " +
+							"Mixed vegetables = 2,\nFruit salad = 3, Cheese tray = 4, Meat tray = 5");
+			side1Input = input.nextInt();
+			if (side1Input >= 0 && side1Input < 6){
+				sideChosen = true;
+			}
+		}
+		return side1Input;
+	}
+	//Method to get side2 for dinner events
+	public static int getSide2Input(Scanner input, int side1Input) {
+		boolean sideChosen = false;
+		int side2Input = 9;
+		while (!sideChosen) {
+			System.out.println("Enter a no# for second side choice\nMacaroni = 0, Ceaser salad = 1, " +
+							"Mixed vegetables = 2,\nFruit salad = 3, Cheese tray = 4, Meat tray = 5");
+			side2Input = input.nextInt();
+			if (side2Input == side1Input) {
+				System.out.println("Side already chosen! Pick another side.");
+			} else if (side2Input >= 0 && side2Input < 6){
+				sideChosen = true;
+			}
+		}
+		return side1Input;
+	}
+	//Method to get dessert for dinner events
+	public static int getDessertInput(Scanner input) {
+		boolean dessertChosen = false;
+		int dessertInput = 0;
+		while (!dessertChosen) {
+			System.out.println("Enter a no# for dessert choice\nAngel food cake = 0, Brownies = 1,\n" +
+							"Chocolate chip cookies= 2, Peach cobbler = 3");
+			dessertInput = input.nextInt();
+			if (dessertInput >= 0 && dessertInput < 4) {
+				dessertChosen = true;
+			}
+		}
+		return dessertInput;
+	}
 	//This method prints the motto for Carly's Catering
 	public static void printMotto() {
 		System.out.println("********************************************");
 		System.out.println("Carly's makes the food that makes it a party.");
 		System.out.println("********************************************");
 	}
-	//This Method prints the bill for the event
+	//This method prints the bill for dinner events
+	public static void printDinnerDetails(DinnerEvent dinnerEvent) {
+		System.out.println("\nBill for event no# " + dinnerEvent.getEventNumber());
+		System.out.println(dinnerEvent.getEventType() + " event");
+		System.out.println("Contact phone no# " + dinnerEvent.getPhoneNum());
+		System.out.println("Number of guests attending is " + dinnerEvent.getNumberOfGuests());
+		System.out.println("Price per guest is $" + dinnerEvent.getPricePerGuest());
+		//Check if the event is a large event
+		boolean largeEvent = dinnerEvent.isLargeEvent();
+		if (largeEvent == true) {
+			System.out.println("Event is a large event.");
+		} else {
+			System.out.println("Event is a small event");
+		}
+		System.out.println("Price for the event is $" + dinnerEvent.getEventPrice());
+	}
+	//Method to print out a menu
+	public static void getMenu(DinnerEvent dinnerEvent) {
+		System.out.println("***** Menu *****");
+		System.out.println("Entree = " + dinnerEvent.getEntree());
+		System.out.println("Side choice 1 = " + dinnerEvent.getSide1());
+		System.out.println("Side choice 2 = " + dinnerEvent.getSide2());
+		System.out.println("Dessert = " + dinnerEvent.getDessert());
+	}
+	//This Method prints the bill for events
 	public static void printDetails(Event event) {
 		System.out.println("\nBill for event no# " + event.getEventNumber());
 		System.out.println(event.getEventType() + " event");
@@ -110,11 +255,11 @@ public class EventDemo{
 		System.out.println("Number of guests attending is " + event.getNumberOfGuests());
 		System.out.println("Price per guest is $" + event.getPricePerGuest());
 		//Check if the event is a large event
-		boolean largeEvent = event.isLargeEvent(event.getNumberOfGuests());
-		if (largeEvent = true) {
-			System.out.println("CarlysCatering.Event is a large event.");
+		boolean largeEvent = event.isLargeEvent();
+		if (largeEvent == true) {
+			System.out.println("Event is a large event.");
 		} else {
-			System.out.println("CarlysCatering.Event is a small event");
+			System.out.println("Event is a small event");
 		}
 		System.out.println("Price for the event is $" + event.getEventPrice());
 	}
@@ -129,7 +274,7 @@ public class EventDemo{
 			String tempNum;
 			//Display initial data and clone to another array for sorting
 			for (int i = 0; i < (events.length -1); i++) {
-				System.out.println("CarlysCatering.Event no# " + events[i].getEventNumber());
+				System.out.println("Event no# " + events[i].getEventNumber());
 				eventNumArray[i] = events[i].getEventNumber();
 			}
 			//Bubble sort event numbers
@@ -145,7 +290,7 @@ public class EventDemo{
 			//Display the sorted data
 			System.out.println("\nEvents sorted by event number.");
 			for (int i = 0; i < (eventNumArray.length - 1); i++) {
-				System.out.println("CarlysCatering.Event no# " + eventNumArray[i]);
+				System.out.println("Event no# " + eventNumArray[i]);
 			}
 			return true;
 		}
@@ -222,6 +367,5 @@ public class EventDemo{
 		} else {
 			return true;
 		}
-
 	}
 }

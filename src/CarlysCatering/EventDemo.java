@@ -92,7 +92,7 @@ public class EventDemo{
 							int side1Num = getSide1Input(input);
 							int side2Num = getSide2Input(input, side1Num);
 							int dessertNum = getDessertInput(input);
-							events[i] = new DinnerEvent(eventNum, guestsNum, phoneNum, eventTypeInput, entreeNum, side1Num,
+							events[i] = new DinnerEvent(eventNum, guestsNum, phoneNum, entreeNum, side1Num,
 									side2Num, dessertNum);
 						}
 						autofillOptionChosen = true;
@@ -362,10 +362,6 @@ public class EventDemo{
 			return true;
 		}
 		//Quit sorting
-		if (sortType.equals("0")) {
-			return false;
-		} else {
-			return true;
-		}
+        return !sortType.equals("0");
 	}
 }

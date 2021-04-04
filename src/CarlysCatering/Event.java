@@ -33,7 +33,7 @@ public class Event {
 		//Create new Random instance
 		Random rand = new Random();
 		//Random phone number with 501 area code
-		String randomPhone = ("501" + String.valueOf(rand.nextInt(9999999)));
+		String randomPhone = ("501" + rand.nextInt(9999999));
 		//Random number of guests (6 - 99)
 		int randomGuests = (6 + rand.nextInt(93));
 		//Random event type
@@ -63,11 +63,7 @@ public class Event {
 	}
 	//This method checks to see if the event qualifies as a large event (more than 50 guests)
 	public boolean isLargeEvent() {
-		if (numberOfGuests >= cutOffValue) {
-			return true;
-		} else {
-			return false;
-		}
+        return numberOfGuests >= cutOffValue;
 	}
 	//This method formats the entered phone number, eg. removes hyphens and dashes before setting
 	public void setPhoneNumber(String phoneInput) {

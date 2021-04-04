@@ -1,7 +1,7 @@
 package SammysRentals;//Todd Mills
-//Unit 10 Case Problems
+//Unit 11 Case Problems
 //This class creates 3 rental objects, displays their information, and compares sizes
-//Updated for the LessonWithRental Class
+//Updated for the EquipmentWithoutLesson && EquipmentWithLesson classes
 import java.util.Scanner;
 public class RentalDemo {
 
@@ -11,18 +11,8 @@ public class RentalDemo {
 		//Create rental objects based on user input
 		System.out.println("How many rentals would you like to enter?");
 		int numRentals = input.nextInt();
-		LessonWithRental[] rentals = new LessonWithRental[numRentals];
-		for (int i = 0; i < numRentals; i++) {
-			System.out.println("Enter details for rental no# " + (i + 1));
-			rentals[i] = new LessonWithRental(enterContractNumber(input), enterRentalTimeInput(input),
-					enterEquipType(input));
-		}
+		Rental[] rentals = new Rental[numRentals];
 		//Option to autofill data
-		/*for (int i = 0; i < numRentals; i++) {
-			System.out.println("Enter details for rental no# " + (i + 1));
-			rentals[i] = new LessonWithRental(enterContractNumber(input), enterRentalTimeInput(input),
-					enterEquipType(input), enterPhoneNumber(input));
-		}
 		boolean autofillOptionChosen = false;
 		while (!autofillOptionChosen) {
 			System.out.println("Autofill rental data? Y or N");
@@ -39,10 +29,10 @@ public class RentalDemo {
 				for (int i = 0; i < numRentals; i++) {
 					System.out.println("Enter details for rental no# " + (i + 1));
 					rentals[i] = new Rental(enterContractNumber(input), enterRentalTimeInput(input),
-							enterEquipType(input), enterPhoneNumber(input));
+							enterEquipType(input));
 				}
 			}
-		}*/
+		}
 		//Print the banner/motto for Sammy's Rentals
 		printMotto();
 		//Get the results and print the bill to console for each rental
@@ -67,18 +57,14 @@ public class RentalDemo {
 	//Class methods
 	//This method prompts the user for the contract number
 	public static String enterContractNumber(Scanner input) {
-		String contractNum;
 		System.out.println("Please enter the contract number.");
-		contractNum = input.next();
-		return contractNum;
+		return input.next();
 	}
 	//This method gets the type of equipment rented
 	public static int enterEquipType(Scanner input) {
-		int equipTypeInput = 0;
 		System.out.println("Enter the type of equipment rented.\nPersonal Watercraft = 0, Pontoon Boat = 1," +
 				"\nRowboat = 2, Canoe = 3,\nKayak = 4, Beach Chair = 5,\nUmbrella = 6, Other = 7");
-		equipTypeInput = input.nextInt();
-		return equipTypeInput;
+		return input.nextInt();
 	}
 	//This method prompts the user for the rental time in minutes
 	public static int enterRentalTimeInput(Scanner input) {
@@ -99,25 +85,19 @@ public class RentalDemo {
 		}
 		return rentalTimeInput;
 	}
-	//Get a phone number from the user
-	public static String enterPhoneNumber(Scanner input) {
-		String phoneInput;
-		System.out.println("Enter a phone number.");
-		phoneInput = input.next();
-		return phoneInput;
-	}
 	//This method prints the final bill for the rental
-	public static void printResults(LessonWithRental rental) {
+	public static void printResults(Rental rental) {
 		System.out.println("\nContract #" + rental.getContractNumber());
-		System.out.println("Equipment rented = " + rental.getEquipType());
-		//System.out.println("Phone number - " + rental.getPhoneNumber());
+		System.out.println("Equipment rented = " + rental.getEquipment().getEquipName());
+		System.out.println("Equipment surcharge is $" + rental.getRentalSurcharge());
+		System.out.println(rental.getEquipment().getLessonPolicy());
 		System.out.println("Rental price is $" + rental.getRentalRate() +
-				" per hour, and $1 for each additional minute, up to 40.");
+				" per hour, and $1 for each additional minute, up to $" + rental.getRentalRate() + ".");
 		System.out.println("The total rental time is " + rental.getTotalTime() + " minutes.");
 		System.out.println("The billable rental time is " + rental.getRentalHours() + " hours and " +
 				rental.getMinutesOverHour() + " minutes.");
-		System.out.println("The total cost for the rental is $" + rental.getRentalPrice() + ".");
-		System.out.println(rental.getInstructor());
+		System.out.println("Price for the time of the rental is $" + rental.getBasePrice());
+		System.out.println("The total cost for the rental is $" + rental.getTotalRentalPrice() + ".");
 	}
 	//This method prints the motto for Sammy's Rentals
 	public static void printMotto() {
@@ -127,7 +107,8 @@ public class RentalDemo {
 	}
 	//Method for sorting rental data
 	public static boolean sortRentals(Scanner input, Rental[] rentals) {
-		System.out.println("\nSort by contract number = 1 Sort by rental price = 2 Sort by equipment type = 3 Cancel = 0");
+		System.out.println("\nSort by contract number = 1 Sort by rental price = 2 " +
+				"Sort by equipment type = 3 Cancel = 0");
 		String sortType = input.next();
 		//Sort by contract number
 		if (sortType.equals("1")) {
@@ -165,8 +146,8 @@ public class RentalDemo {
 			String tempPriceNum;
 			//Display initial data and clone to another array for sorting
 			for (int i = 0; i < rentals.length; i++) {
-				System.out.println(rentals[i].getContractNumber() + " costs $" + rentals[i].getRentalPrice());
-				rentalPriceArray[i] = rentals[i].getRentalPrice();
+				System.out.println(rentals[i].getContractNumber() + " costs $" + rentals[i].getTotalRentalPrice());
+				rentalPriceArray[i] = rentals[i].getTotalRentalPrice();
 				rentalPriceNumArray[i] = rentals[i].getContractNumber();
 			}
 			//Bubble sort rental time and contract numbers
@@ -198,8 +179,8 @@ public class RentalDemo {
 			String tempTypeNum;
 			//Display initial data and clone to another array for sorting
 			for (int i = 0; i < rentals.length; i++) {
-				System.out.println(rentals[i].getContractNumber() + " is a " + rentals[i].getEquipType() + " rental.");
-				equipTypeArray[i] = rentals[i].getEquipTypeInt();
+				System.out.println(rentals[i].getContractNumber() + " is a " + rentals[i].getEquipment().getEquipName() + " rental.");
+				equipTypeArray[i] = rentals[i].getEquipment().getEquipType();
 				equipTypeNumArray[i] = rentals[i].getContractNumber();
 			}
 			//Bubble sort equip types and contract numbers
@@ -218,16 +199,13 @@ public class RentalDemo {
 			//Display the sorted data
 			System.out.println("\nRentals sorted by equipment type");
 			for (int i = 0; i < equipTypeArray.length; i++) {
-				System.out.println(equipTypeNumArray[i] + " is a " + Rental.equipTypes[equipTypeArray[i]] + " rental.");
+				System.out.println(equipTypeNumArray[i] + " is a " +
+						rentals[i].getEquipment().checkEquipType(equipTypeArray[i]) + " rental.");
 			}
 			return true;
 		}
 		//Quit sorting
-		if (sortType.equals("0")) {
-			return false;
-		} else {
-			return true;
-		}
+        return !sortType.equals("0");
 
 	}
 }

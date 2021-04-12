@@ -1,4 +1,4 @@
-package CardDemo;
+package CSC335.CardDemo;
 
 //Todd Mills
 //CSC335 Project 1

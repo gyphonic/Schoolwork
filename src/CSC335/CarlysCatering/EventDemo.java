@@ -1,4 +1,4 @@
-package CarlysCatering;//Todd Mills
+package CSC335.CarlysCatering;//Todd Mills
 //Unit 10 case problems
 //This program makes multiple event objects, gets data for each, and prints the bill
 //Updated for DinnerEvent class

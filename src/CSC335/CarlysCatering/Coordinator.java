@@ -1,4 +1,4 @@
-package CarlysCatering;
+package CSC335.CarlysCatering;
 //Todd Mills
 //Unit 11 Case Problems
 //Class for the Coordinator employees

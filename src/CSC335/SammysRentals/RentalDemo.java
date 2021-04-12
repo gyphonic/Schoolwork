@@ -1,4 +1,4 @@
-package SammysRentals;//Todd Mills
+package CSC335.SammysRentals;//Todd Mills
 //Unit 11 Case Problems
 //This class creates 3 rental objects, displays their information, and compares sizes
 //Updated for the EquipmentWithoutLesson && EquipmentWithLesson classes

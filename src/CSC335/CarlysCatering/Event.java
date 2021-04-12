@@ -1,4 +1,4 @@
-package CarlysCatering;//Todd Mills
+package CSC335.CarlysCatering;//Todd Mills
 //Unit 9 Case Problems
 //This class holds event class data for Carly's Catering CarlysCatering.Event Demo
 import java.util.Random;

@@ -1,4 +1,4 @@
-package SammysRentals;//Todd Mills
+package CSC335.SammysRentals;//Todd Mills
 //Unit 10 Case Problems
 //This class holds data for the Rental object for Sammys Rentals Demo
 import java.util.Random;

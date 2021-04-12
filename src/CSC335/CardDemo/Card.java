@@ -1,4 +1,4 @@
-package CardDemo;
+package CSC335.CardDemo;
 
 import java.util.Arrays;
 import java.util.Random;

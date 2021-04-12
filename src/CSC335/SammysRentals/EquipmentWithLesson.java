@@ -1,4 +1,4 @@
-package SammysRentals;
+package CSC335.SammysRentals;
 
 public class EquipmentWithLesson extends Equipment{
     //Class constructor

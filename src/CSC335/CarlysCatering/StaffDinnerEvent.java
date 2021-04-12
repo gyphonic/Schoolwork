@@ -1,4 +1,4 @@
-package CarlysCatering;
+package CSC335.CarlysCatering;
 import java.sql.SQLOutput;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -167,7 +167,8 @@ public class StaffDinnerEvent {
         for(int i = 0; i < (empArray.length -1); i++) {
             if (empArray[i] != null && empArray[i].getEmpJobTitle().equals("Coordinator")){
                 empArray[i].printEmployee();
-            }
+                System.out.println();
+                            }
         }
     }
 }

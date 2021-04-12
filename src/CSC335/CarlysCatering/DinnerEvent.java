@@ -1,4 +1,4 @@
-package CarlysCatering;
+package CSC335.CarlysCatering;
 import java.util.ArrayList;
 import java.util.Random;
 //Todd Mills

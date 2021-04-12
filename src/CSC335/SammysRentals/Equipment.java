@@ -1,4 +1,4 @@
-package SammysRentals;
+package CSC335.SammysRentals;
 //Todd Mills
 //Unit 11 Case Problems
 //Superclass for all equipment

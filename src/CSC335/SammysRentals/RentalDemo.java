@@ -1,53 +1,17 @@
 package CSC335.SammysRentals;//Todd Mills
-//Unit 11 Case Problems
+//Unit 12 Case Problems
 //This class creates 3 rental objects, displays their information, and compares sizes
-//Updated for the EquipmentWithoutLesson && EquipmentWithLesson classes
+//Updated for the error handling
 import java.util.Scanner;
 public class RentalDemo {
 
 	public static void main(String[] args) {
 		//Create a new Scanner
 		Scanner input = new Scanner(System.in);
-		//Create rental objects based on user input
-		System.out.println("How many rentals would you like to enter?");
-		int numRentals = input.nextInt();
-		Rental[] rentals = new Rental[numRentals];
-		//Option to autofill data
-		boolean autofillOptionChosen = false;
-		while (!autofillOptionChosen) {
-			System.out.println("Autofill rental data? Y or N");
-			String autofillChoice = input.next();
-			//If Y, randomize rental data
-			if (autofillChoice.equals("Y")) {
-				for (int i = 0; i < numRentals; i++) {
-					rentals[i] = new Rental();
-					rentals[i].randomizeRental();
-				}
-				autofillOptionChosen = true;
-			}
-			if (autofillChoice.equals("N")) {
-				for (int i = 0; i < numRentals; i++) {
-					System.out.println("Enter details for rental no# " + (i + 1));
-					rentals[i] = new Rental(enterContractNumber(input), enterRentalTimeInput(input),
-							enterEquipType(input));
-				}
-			}
-		}
-		//Print the banner/motto for Sammy's Rentals
-		printMotto();
-		//Get the results and print the bill to console for each rental
-		for ( int i = 0; i < numRentals; i++) {
-			printResults(rentals[i]);
-		}
-		//Ask if the user would like to sort event data
-		System.out.println("\nWould you like to sort rentals? Y or N");
-		String sortInput = input.next();
-		if (sortInput.equals("Y")) {
-			boolean keepSorting = true;
-			System.out.println("\nSorting rentals");
-			while (keepSorting) {
-				keepSorting = sortRentals(input, rentals);
-			}
+		//Ask the user for rental object data, and start over if an exception is thrown
+		boolean validRental = true;
+		while(validRental) {
+			validRental = createRental(input);
 		}
 		//Close the Scanner
 		input.close();
@@ -55,6 +19,59 @@ public class RentalDemo {
 		System.out.println("~~~~~~Closing Program~~~~~~");
 	}
 	//Class methods
+	//Method to hold the rental object creation
+	public static boolean createRental(Scanner input) {
+		boolean rentalCreationInProgress = true;
+		try {
+			//Create rental objects based on user input
+			System.out.println("How many rentals would you like to enter?");
+			int numRentals = input.nextInt();
+			Rental[] rentals = new Rental[numRentals];
+			//Option to autofill data
+			boolean autofillOptionChosen = false;
+			while (!autofillOptionChosen) {
+				System.out.println("Autofill rental data? Y or N");
+				String autofillChoice = input.next();
+				//If Y, randomize rental data
+				if (autofillChoice.equals("Y")) {
+					for (int i = 0; i < numRentals; i++) {
+						rentals[i] = new Rental();
+						rentals[i].randomizeRental();
+					}
+					autofillOptionChosen = true;
+				}
+				if (autofillChoice.equals("N")) {
+					for (int i = 0; i < numRentals; i++) {
+						System.out.println("Enter details for rental no# " + (i + 1));
+						rentals[i] = new Rental(enterContractNumber(input), enterRentalTimeInput(input),
+								enterEquipType(input));
+					}
+				}
+			}
+			//Print the banner/motto for Sammy's Rentals
+			printMotto();
+			//Get the results and print the bill to console for each rental
+			for ( int i = 0; i < numRentals; i++) {
+				printResults(rentals[i]);
+			}
+			//Ask if the user would like to sort event data
+			System.out.println("\nWould you like to sort rentals? Y or N");
+			String sortInput = input.next();
+			if (sortInput.equals("Y")) {
+				boolean keepSorting = true;
+				System.out.println("\nSorting rentals");
+				while (keepSorting) {
+					keepSorting = sortRentals(input, rentals);
+				}
+			}
+			rentalCreationInProgress = false;
+		}
+		catch(Exception e) {
+			System.out.println("\nIssue creating rental " + e);
+			System.out.println("Please try again.\n");
+		}
+		return rentalCreationInProgress;
+	}
 	//This method prompts the user for the contract number
 	public static String enterContractNumber(Scanner input) {
 		System.out.println("Please enter the contract number.");

@@ -1,6 +1,4 @@
 package CSC335.CarlysCatering;
-import java.sql.SQLOutput;
-import java.util.Arrays;
 import java.util.Scanner;
 //Todd Mills
 //Unit 11 Case Problems
@@ -9,20 +7,37 @@ public class StaffDinnerEvent {
     public static void main(String args[]){
         //Create a new Scanner
         Scanner input = new Scanner(System.in);
-        //int to hold the value of side1
         //Instantiate a dinner event
-        DinnerEvent DemoEvent = new DinnerEvent(getEventNum(input), getGuestNum(input), getPhoneNum(input),
-                getEntree(input), getSide1(input), getSide2(input, side1), getDessert(input));
-        assignEmployees(input, DemoEvent);
-        printDetails(DemoEvent);
+        boolean validEvent = true;
+        while(validEvent){
+            validEvent = createEvent(input);
+        }
     }
+
     //Class fields and methods
     //int to hold the value of side1
     private static int side1;
+
     //Class methods
+    //Method to create an event
+    public static boolean createEvent(Scanner input) {
+        boolean eventCreationInProgress = true;
+        try {
+            DinnerEvent DemoEvent = new DinnerEvent(getEventNum(input), getGuestNum(input), getPhoneNum(input),
+                    getEntree(input), getSide1(input), getSide2(input, side1), getDessert(input));
+            assignEmployees(input, DemoEvent);
+            printDetails(DemoEvent);
+            eventCreationInProgress = false;
+        }
+        catch(Exception e) {
+            System.out.println("Issue creating event: " + e );
+            System.out.println("Please try again.");
+        }
+        return eventCreationInProgress;
+    }
     //Enter the number for the event
     public static String getEventNum(Scanner input) {
-        System.out.println("Enter the event no#");
+        System.out.println("Enter the event number.");
         return input.next();
     }//Enter the number of guests
     public static int getGuestNum(Scanner input) {

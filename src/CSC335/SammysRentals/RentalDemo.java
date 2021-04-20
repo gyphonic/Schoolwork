@@ -6,23 +6,20 @@ import java.util.Scanner;
 public class RentalDemo {
 
 	public static void main(String[] args) {
-		//Create a new Scanner
-		Scanner input = new Scanner(System.in);
 		//Ask the user for rental object data, and start over if an exception is thrown
 		boolean validRental = true;
 		while(validRental) {
-			validRental = createRental(input);
+			validRental = createRental();
 		}
-		//Close the Scanner
-		input.close();
 		//Print closing message
 		System.out.println("~~~~~~Closing Program~~~~~~");
 	}
 	//Class methods
 	//Method to hold the rental object creation
-	public static boolean createRental(Scanner input) {
+	public static boolean createRental() {
 		boolean rentalCreationInProgress = true;
 		try {
+			Scanner input = new Scanner(System.in);
 			//Create rental objects based on user input
 			System.out.println("How many rentals would you like to enter?");
 			int numRentals = input.nextInt();

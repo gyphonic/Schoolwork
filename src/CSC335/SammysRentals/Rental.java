@@ -1,6 +1,7 @@
 package CSC335.SammysRentals;//Todd Mills
 //Unit 12 Case Problems
-//This class holds data for the Rental object for Sammys Rentals Demo
+//This class holds data for the Rental object for Sammy's Rentals Demo
+//Updated for error handling
 import java.util.Random;
 public class Rental {
 	//Class data fields

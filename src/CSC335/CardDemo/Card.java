@@ -8,6 +8,8 @@ import java.util.Random;
 //This class holds data for the Card object
 
 /*
+
+
 This program can create a deck of 52 cards, assign them random numbers, sort them, or deal them into 4 hands and print
 the contents of each hand onscreen. Made with love and sweat.
  */

@@ -1,0 +1,3 @@
+K678, event type code: 0, number of guests: 20, price: $700
+W345, event type code: 0, number of guests: 15, price: $525
+A000, event type code: 0, number of guests: 10, price: $350

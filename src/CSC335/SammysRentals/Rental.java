@@ -112,6 +112,12 @@ public class Rental {
 	public Equipment getEquipment() {
 		return Equipment;
 	}
+	public String getEquipName() {
+		return Equipment.getEquipName();
+	}
+	public int getEquipTypeInt() {
+		return Equipment.getEquipType();
+	}
 	public int getBasePrice() {
 		return basePrice;
 	}

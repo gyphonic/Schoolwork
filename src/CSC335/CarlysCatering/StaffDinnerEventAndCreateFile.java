@@ -1,16 +1,25 @@
 package CSC335.CarlysCatering;
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
+
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 //Todd Mills
-//Unit 11 Case Problems
+//Unit 13 Case Problems
 //This class creates dinner events and assigns employees
-public class StaffDinnerEvent {
+//Updated to save event information to file
+
+public class StaffDinnerEventAndCreateFile {
     public static void main(String args[]){
-        //Create a new Scanner
-        Scanner input = new Scanner(System.in);
-        //Instantiate a dinner event
+        //Main loop, runs until it is completed without exceptions
         boolean validEvent = true;
         while(validEvent){
-            validEvent = createEvent(input);
+            validEvent = createEvents();
         }
     }
 
@@ -19,22 +28,61 @@ public class StaffDinnerEvent {
     private static int side1;
 
     //Class methods
-    //Method to create an event
-    public static boolean createEvent(Scanner input) {
+    //Method to create events, bundled for error handling
+    public static boolean createEvents() {
         boolean eventCreationInProgress = true;
         try {
-            DinnerEvent DemoEvent = new DinnerEvent(getEventNum(input), getGuestNum(input), getPhoneNum(input),
-                    getEntree(input), getSide1(input), getSide2(input, side1), getDessert(input));
-            assignEmployees(input, DemoEvent);
-            printDetails(DemoEvent);
+            //Create a new Scanner
+            Scanner input = new Scanner(System.in);
+            //Ask for the amount of events to enter
+            System.out.println("How many events would you like to enter?");
+            int numEvents = input.nextInt();
+            DinnerEvent[] events = new DinnerEvent[numEvents];
+            for(int i = 0; i < numEvents; i++) {
+                events[i] = new DinnerEvent(getEventNum(input), getGuestNum(input), getPhoneNum(input),
+                        getEntree(input), getSide1(input), getSide2(input, side1), getDessert(input));
+            }
+
+            //Get employee information
+            for(int i = 0; i < numEvents; i++) {
+                assignEmployees(input, events[i]);
+            }
+            //Print the details of the events
+            for(int i = 0; i < numEvents; i++) {
+                printDetails(events[i]);
+            }
+            //Write event information to file
+            System.out.println("Would you like to save event information to file? Y or N");
+            if(input.next().equals("Y")) {
+                Path file = Paths.get("out/production/Schoolwork/CSC335/CarlysCatering/EventInfo.txt");
+                System.out.println("Writing data to EventInfo.txt");
+                String eventString = null;
+                OutputStream output = new BufferedOutputStream(Files.newOutputStream(file, TRUNCATE_EXISTING));
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output));
+                for (int i = 0; i < events.length; i++) {
+                    eventString = events[i].getEventNumber() + ", event type code: " + events[i].getEventTypeInt()
+                    + ", number of guests: " + events[i].getNumberOfGuests() + ", price: $" + events[i].getEventPrice();
+                    System.out.println(eventString);
+                    writer.write(eventString, 0, eventString.length());
+                    writer.newLine();
+                }
+                writer.close();
+                System.out.println("Data saved. File path is " + file.toAbsolutePath());
+            }
+            //Close the Scanner
+            input.close();
+            //return a boolean value to end the loop
             eventCreationInProgress = false;
         }
+        //Catch any exceptions that occur in the method and start over
         catch(Exception e) {
-            System.out.println("Issue creating event: " + e );
+            System.out.println("Issue creating events: " + e );
             System.out.println("Please try again.");
         }
         return eventCreationInProgress;
     }
+
+    //Other class methods
     //Enter the number for the event
     public static String getEventNum(Scanner input) {
         System.out.println("Enter the event number.");

@@ -1,0 +1,50 @@
+E107, hours: 1, minutes: 17, equipment: Beach chair, equipment code: 6, price: $58
+B628, hours: 2, minutes: 40, equipment: Umbrella, equipment code: 7, price: $120
+A818, hours: 1, minutes: 22, equipment: Ski, equipment code: 1, price: $102
+E119, hours: 2, minutes: 40, equipment: Rowboat, equipment code: 3, price: $159
+C701, hours: 2, minutes: 40, equipment: Canoe, equipment code: 4, price: $157
+C417, hours: 2, minutes: 40, equipment: Canoe, equipment code: 4, price: $157
+A685, hours: 1, minutes: 15, equipment: Kayak, equipment code: 5, price: $84
+B359, hours: 1, minutes: 0, equipment: Beach chair, equipment code: 6, price: $41
+A800, hours: 1, minutes: 40, equipment: Pontoon boat, equipment code: 2, price: $122
+A462, hours: 1, minutes: 19, equipment: Ski, equipment code: 1, price: $99
+B833, hours: 1, minutes: 7, equipment: Beach chair, equipment code: 6, price: $48
+F288, hours: 1, minutes: 40, equipment: Beach chair, equipment code: 6, price: $81
+A549, hours: 1, minutes: 25, equipment: Canoe, equipment code: 4, price: $102
+E623, hours: 2, minutes: 34, equipment: Pontoon boat, equipment code: 2, price: $156
+F695, hours: 1, minutes: 33, equipment: Ski, equipment code: 1, price: $113
+H289, hours: 2, minutes: 40, equipment: Personal watercraft, equipment code: 0, price: $197
+D741, hours: 1, minutes: 28, equipment: Canoe, equipment code: 4, price: $105
+D473, hours: 2, minutes: 8, equipment: Rowboat, equipment code: 3, price: $127
+E247, hours: 2, minutes: 6, equipment: Rowboat, equipment code: 3, price: $125
+H376, hours: 1, minutes: 21, equipment: Kayak, equipment code: 5, price: $90
+D407, hours: 1, minutes: 40, equipment: Umbrella, equipment code: 7, price: $80
+C754, hours: 1, minutes: 31, equipment: Umbrella, equipment code: 7, price: $71
+H853, hours: 2, minutes: 26, equipment: Personal watercraft, equipment code: 0, price: $183
+B831, hours: 1, minutes: 32, equipment: Rowboat, equipment code: 3, price: $111
+C988, hours: 1, minutes: 40, equipment: Personal watercraft, equipment code: 0, price: $157
+A257, hours: 2, minutes: 40, equipment: Beach chair, equipment code: 6, price: $121
+F514, hours: 1, minutes: 16, equipment: Pontoon boat, equipment code: 2, price: $98
+A314, hours: 1, minutes: 37, equipment: Pontoon boat, equipment code: 2, price: $119
+A230, hours: 2, minutes: 9, equipment: Kayak, equipment code: 5, price: $118
+B490, hours: 2, minutes: 25, equipment: Pontoon boat, equipment code: 2, price: $147
+F480, hours: 1, minutes: 40, equipment: Rowboat, equipment code: 3, price: $119
+A343, hours: 1, minutes: 1, equipment: Kayak, equipment code: 5, price: $70
+D622, hours: 2, minutes: 4, equipment: Canoe, equipment code: 4, price: $121
+C582, hours: 2, minutes: 31, equipment: Ski, equipment code: 1, price: $151
+H757, hours: 2, minutes: 21, equipment: Beach chair, equipment code: 6, price: $102
+E255, hours: 1, minutes: 34, equipment: Ski, equipment code: 1, price: $114
+H310, hours: 2, minutes: 24, equipment: Pontoon boat, equipment code: 2, price: $146
+F795, hours: 2, minutes: 36, equipment: Rowboat, equipment code: 3, price: $155
+A571, hours: 1, minutes: 37, equipment: Canoe, equipment code: 4, price: $114
+H394, hours: 1, minutes: 1, equipment: Canoe, equipment code: 4, price: $78
+F385, hours: 1, minutes: 18, equipment: Pontoon boat, equipment code: 2, price: $100
+H796, hours: 2, minutes: 40, equipment: Kayak, equipment code: 5, price: $149
+F135, hours: 1, minutes: 2, equipment: Ski, equipment code: 1, price: $82
+E202, hours: 2, minutes: 30, equipment: Kayak, equipment code: 5, price: $139
+H790, hours: 2, minutes: 40, equipment: Beach chair, equipment code: 6, price: $121
+A119, hours: 1, minutes: 28, equipment: Pontoon boat, equipment code: 2, price: $110
+D182, hours: 2, minutes: 40, equipment: Rowboat, equipment code: 3, price: $159
+B476, hours: 2, minutes: 6, equipment: Ski, equipment code: 1, price: $126
+F415, hours: 2, minutes: 31, equipment: Rowboat, equipment code: 3, price: $150
+C895, hours: 2, minutes: 2, equipment: Ski, equipment code: 1, price: $122

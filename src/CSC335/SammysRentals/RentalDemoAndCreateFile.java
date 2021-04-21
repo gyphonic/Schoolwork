@@ -1,9 +1,14 @@
-package CSC335.SammysRentals;//Todd Mills
-//Unit 12 Case Problems
-//This class creates 3 rental objects, displays their information, and compares sizes
-//Updated for the error handling
+package CSC335.SammysRentals;
+//Todd Mills
+//Unit 13 Case Problems
+//This class creates rental objects, displays their information, and compares sizes
+//Updated to write rental information to file
+import java.io.*;
+import java.nio.file.*;
 import java.util.Scanner;
-public class RentalDemo {
+import static java.nio.file.StandardOpenOption.*;
+
+public class RentalDemoAndCreateFile {
 
 	public static void main(String[] args) {
 		//Ask the user for rental object data, and start over if an exception is thrown
@@ -15,10 +20,11 @@ public class RentalDemo {
 		System.out.println("~~~~~~Closing Program~~~~~~");
 	}
 	//Class methods
-	//Method to hold the rental object creation
+	//Method to instantiate and sort rental objects
 	public static boolean createRental() {
 		boolean rentalCreationInProgress = true;
 		try {
+			//Create a new Scanner
 			Scanner input = new Scanner(System.in);
 			//Create rental objects based on user input
 			System.out.println("How many rentals would you like to enter?");
@@ -51,6 +57,28 @@ public class RentalDemo {
 			for ( int i = 0; i < numRentals; i++) {
 				printResults(rentals[i]);
 			}
+			//Ask if the user would like to save the rental information to file
+			System.out.println("\nWould you like to save rental information to file? Y or N");
+			String writeInput = input.next();
+			if (writeInput.equals("Y")) {
+				Path file = Paths.get("out/production/Schoolwork/CSC335/SammysRentals/RentalInfo.txt");
+				System.out.println("Writing data to RentalInfo.txt");
+				String rentalString = null;
+				OutputStream output = new BufferedOutputStream(Files.newOutputStream(file, TRUNCATE_EXISTING));
+				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output));
+				for (int i = 0; i < rentals.length; i++) {
+					rentalString = rentals[i].getContractNumber() + ", hours: " + rentals[i].getRentalHours()
+							+ ", minutes: " + rentals[i].getMinutesOverHour() + ", equipment: "
+							+ rentals[i].getEquipName() + ", equipment code: " + rentals[i].getEquipTypeInt()
+							+ ", price: $" + rentals[i].getTotalRentalPrice();
+					System.out.println(rentalString);
+					writer.write(rentalString, 0, rentalString.length());
+					writer.newLine();
+
+				}
+				writer.close();
+				System.out.println("Data saved. File path is " + file.toAbsolutePath());
+			}
 			//Ask if the user would like to sort event data
 			System.out.println("\nWould you like to sort rentals? Y or N");
 			String sortInput = input.next();
@@ -61,8 +89,10 @@ public class RentalDemo {
 					keepSorting = sortRentals(input, rentals);
 				}
 			}
+			//Return a value to end the main loop
 			rentalCreationInProgress = false;
 		}
+		//If exceptions are thrown, print them and restart the loop
 		catch(Exception e) {
 			System.out.println("\nIssue creating rental " + e);
 			System.out.println("Please try again.\n");

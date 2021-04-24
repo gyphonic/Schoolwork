@@ -1,0 +1,10 @@
+Address   |City   |State|ZipCode|Date    |Price  |RehabCost|Price Sold|Total Cost|NetIncome|Taxes|Profit After Tax|Gain
+314 ARBOUR|Newark |DE   |19713  |08/12/14|$16,000|$14,000  |$51,000||||||
+119 KINGS |Bear   |DE   |19701  |09/10/14|$15,000|$15,000  |$31,000||||||
+400 BRENEN|Newark |DE   |19713  |10/14/14|$12,000|$16,000  |$61,000||||||
+284 COURT |Newark |DE   |19702  |10/14/14|$13,000|$16,000  |$31,000||||||
+114 SONAN |Newark |DE   |19713  |10/14/14|$123,00|$16,000  |$31,300||||||
+206 BEAVER|Bear   |DE   |19701  |10/14/14|$23,000|$16,000  |$25,300||||||
+37 SPRING |Newark |DE   |19711  |11/12/14|$16,000|$15,000  |$81,000||||||
+404Mansion|Concord|DE   |19804  |11/12/14|$13,050|$16,000  |$61,500||||||
+38Gershwin|Bear   |DE   |19720  |04/10/14|$11,50 |$16,000  |$31,900||||||

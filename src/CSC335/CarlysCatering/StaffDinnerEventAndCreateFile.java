@@ -1,14 +1,9 @@
 package CSC335.CarlysCatering;
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.*;
+import java.nio.file.*;
 import java.util.Scanner;
-
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+
 //Todd Mills
 //Unit 13 Case Problems
 //This class creates dinner events and assigns employees

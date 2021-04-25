@@ -1,9 +1,12 @@
 package CSC335.PropReader;
+
 //Todd Mills
 //CSC335 Project 2
 //This class is for holding sales report information by location
+
 public class SalesReport {
     //Data fields
+    private static final String delimiter = "|";
     private String address;
     private String city;
     private String state;
@@ -18,27 +21,28 @@ public class SalesReport {
     private double profitAfterTax;
     private double gain;
 
-    //Default and overloaded constructors
-    public SalesReport() {
-
-    }
-    public SalesReport(String address, String city, String state, String zipCode, String date, int price,
-                       int rehabCost, int sellPrice) {
+    //Constructor
+    public SalesReport(String address, String city, String state, String zipCode, String date, String price,
+                       String rehabCost, String sellPrice) {
         setAddress(address);
         setCity(city);
         setState(state);
         setZipCode(zipCode);
         setDate(date);
-        setPrice(price);
-        setRehabCost(rehabCost);
-        setSellPrice(sellPrice);
+        setPrice(formatString(price));
+        setRehabCost(formatString(rehabCost));
+        setSellPrice(formatString(sellPrice));
         calculate();
     }
 
     //Class methods
     //Method to print out data about the object
     public String print()  {
-        return  this.address + " " + this.city + " " + this.state + " " + this.zipCode + " " + this.date;
+        return  address + delimiter + city + delimiter + state + delimiter + zipCode + delimiter + date +
+                delimiter + formatInt(price) + delimiter + formatInt(rehabCost) + delimiter + formatInt(sellPrice) +
+                delimiter + formatInt(totalCost) + delimiter + formatInt(netIncome) + delimiter +
+                formatDouble(tax, true) + delimiter + formatDouble(profitAfterTax, true) + delimiter +
+                formatDouble(gain, false);
     }
     //Method to calculate sales report data
     private void calculate() {
@@ -53,29 +57,73 @@ public class SalesReport {
         //Percent gain is profit after tax divided by total cost
         gain = profitAfterTax / totalCost;
     }
+    //Method to parse incoming Strings into ints
+    private int formatString(String inputNumber) {
+        StringBuilder formattedInt = new StringBuilder();
+        for (int i = 0; i < inputNumber.length(); i++) {
+            if (Character.isDigit(inputNumber.charAt(i))) {
+                formattedInt.append(inputNumber.charAt(i));
+            }
+        }
+        return Integer.parseInt(formattedInt.toString());
+    }
+    //Method to format ints into currency notation
+    private String formatInt(int inputNumber) {
+        char[] chars = Integer.toString(inputNumber).toCharArray();
+        StringBuilder formattedMoney = new StringBuilder();
+        int comma = 0;
+        for (int i = chars.length - 1; i > -1; i--) {
+            if (comma % 3 == 0 && comma != 0) {
+                formattedMoney.insert(0, ",");
+            }
+            formattedMoney.insert(0, chars[i]);
+            comma++;
+        }
+        formattedMoney.insert(0, "$");
+        return formattedMoney.toString();
+    }
+    //Method to format doubles into currency or percentage notation
+    private String formatDouble(Double inputNumber , Boolean currency) {
+        char[] chars = String.format("%.2f", inputNumber).toCharArray();
+        StringBuilder formattedMoney = new StringBuilder();
+        int comma = -3;
+        for (int i = chars.length - 1; i > -1; i--) {
+            if (comma % 3 == 0 && comma != 0 && comma != -3) {
+                formattedMoney.insert(0, ',');
+            }
+            formattedMoney.insert(0,chars[i]);
+            comma++;
+        }
+        if (currency) {
+            formattedMoney.insert(0, "$");
+        } else {
+            formattedMoney.append("%");
+        }
+        return formattedMoney.toString();
+    }
     //Setter methods
-    public void setAddress(String address) {
+    private void setAddress(String address) {
         this.address = address;
     }
-    public void setCity(String city) {
+    private void setCity(String city) {
         this.city = city;
     }
-    public void setState(String state) {
+    private void setState(String state) {
         this.state = state;
     }
-    public void setZipCode(String zipCode) {
+    private void setZipCode(String zipCode) {
         this.zipCode = zipCode;
     }
-    public void setDate(String date) {
+    private void setDate(String date) {
         this.date = date;
     }
-    public void setPrice(int price) {
+    private void setPrice(int price) {
         this.price = price;
     }
-    public void setRehabCost(int rehabCost) {
+    private void setRehabCost(int rehabCost) {
         this.rehabCost = rehabCost;
     }
-    public void setSellPrice(int sellPrice) {
+    private void setSellPrice(int sellPrice) {
         this.sellPrice = sellPrice;
     }
 }

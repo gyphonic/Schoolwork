@@ -1,8 +1,8 @@
-Event number: 123
-Guests: 123
-Phone: 123
+Event number: 13
+Guests: 
+Phone: 
 Entree: 
 First side: 
 Second side: 
 Dessert: 
-Price: 
+Price: $0

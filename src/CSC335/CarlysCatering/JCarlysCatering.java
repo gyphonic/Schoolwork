@@ -24,7 +24,7 @@ public class JCarlysCatering extends JFrame {
     }
 
     //Frame data fields
-    private final int FRAME_HEIGHT = 720;
+    private final int FRAME_HEIGHT = 750;
     private final int FRAME_WIDTH = 600;
     private final Font HEADING = new Font("Arial", Font.BOLD, 36);
     private final Font SUBHEADING = new Font("Arial", Font.PLAIN, 28);
@@ -34,11 +34,12 @@ public class JCarlysCatering extends JFrame {
     private final ImageIcon IMG = new ImageIcon("src/CSC335/CarlysCatering/129724.jpg");
 
     //Event info
+    private boolean missingInfo  = true;
     private final int PRICE_PER_GUEST = 35;
     private String eventNum;
     private String phoneNum;
     private int guestNum;
-    private int totalCost = guestNum * PRICE_PER_GUEST;
+    private int totalCost;
     private static final String[] entreeChoices = {"Steak", "Cheeseburgers", "Salmon", "Pizza", "Chicken", "Pasta"};
     private static final String[] sideChoices = {"Macaroni", "Ceaser salad", "Mixed vegetables", "Fruit salad",
             "Cheese tray", "Meat tray"};
@@ -73,7 +74,7 @@ public class JCarlysCatering extends JFrame {
     private void createFrame(GridBagConstraints con) {
 
         //Main heading
-        JLabel welcome = new JLabel("Event Creator");
+        JLabel welcome = new JLabel("Carly's Catering Event Creator");
         welcome.setFont(HEADING);
         con.gridx = 0;
         con.gridy = 0;
@@ -196,16 +197,24 @@ public class JCarlysCatering extends JFrame {
         eventOutput[4] = new JLabel("First side: ");
         eventOutput[5] = new JLabel("Second side: ");
         eventOutput[6] = new JLabel("Dessert: ");
-        eventOutput[7] = new JLabel("Price: ");
+        eventOutput[7] = new JLabel("Price: $0");
         for (JLabel i : eventOutput) {
             i.setFont(PLAIN);
             con.gridy++;
             add(i, con);
         }
+        //Notify the user of missing information
+        JLabel warning = new JLabel("Missing information");
+        warning.setFont(PLAIN);
+        con.gridwidth = 3;
+        con.gridx = 1;
+        con.gridy++;
+        add(warning, con);
 
         //Update button
         JButton updateButton = new JButton();
         updateButton.setText("Update");
+        con.gridwidth = 1;
         con.gridx = 1;
         con.gridy++;
         add(updateButton, con);
@@ -217,13 +226,19 @@ public class JCarlysCatering extends JFrame {
                 if (!guestNumInput.getText().equals("")) {
                     guestNum = Integer.parseInt(guestNumInput.getText());
                     eventOutput[1].setText("Guests: " + guestNum);
-                } else {
-                    eventOutput[1].setText("Guests: " );
                 }
                 phoneNum = phoneNumInput.getText();
                 eventOutput[2].setText("Phone: " + phoneNum);
-
-                eventOutput[3].setText("Entree: " + entreeChoices[entreeInput.getSelectedIndex() - 1]);
+                eventOutput[3].setText("Entree: " + entreeInput.getSelectedItem().toString());
+                eventOutput[4].setText("First side: " + side1Input.getSelectedItem().toString());
+                eventOutput[5].setText("Second side: " + side2Input.getSelectedItem().toString());
+                eventOutput[6].setText("Dessert: " + dessertInput.getSelectedItem().toString());
+                totalCost = guestNum * PRICE_PER_GUEST;
+                eventOutput[7].setText("Price: $" + totalCost);
+                missingInfo = checkInfo(eventOutput);
+                if (missingInfo) {
+                    warning.setText("Ready to save to file");
+                }
                 validate();
                 repaint();
             }
@@ -239,32 +254,39 @@ public class JCarlysCatering extends JFrame {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    OutputStream output;
-                    BufferedWriter writer;
-                    if(SAVEFILE.toFile().exists()) {
-                        output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, TRUNCATE_EXISTING));
-                    } else {
-                      output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, CREATE));
+
+                    try {
+                        OutputStream output;
+                        BufferedWriter writer;
+                        if (SAVEFILE.toFile().exists()) {
+                            output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, TRUNCATE_EXISTING));
+                        } else {
+                            output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, CREATE));
+                        }
+                        writer = new BufferedWriter(new OutputStreamWriter(output));
+                        for (JLabel i : eventOutput) {
+                            String s = i.getText();
+                            writer.write(s, 0, i.getText().length());
+                            writer.newLine();
+                        }
+                        writer.close();
+                        warning.setText("Saved to: " + SAVEFILE.getFileName());
+                    } catch (IOException i) {
+                        System.out.println("IO error" + i);
                     }
-                    writer = new BufferedWriter(new OutputStreamWriter(output));
-                    for (JLabel i : eventOutput) {
-                        String s = i.getText();
-                        writer.write(s, 0, i.getText().length());
-                        writer.newLine();
-                    }
-                    writer.close();
-                } catch (IOException i) {
-                    System.out.println("IO error" + i);
-                }
             }
         });
 
         //Tiny watermark on the bottom
-        JLabel todd = new JLabel("Todd Mills -- CSC335 -- 2021");
+        JLabel todd = new JLabel("Todd Mills ---- CSC335 ---- 2021");
         todd.setFont(TINY);
         con.gridx = 1;
         con.gridy++;
         add(todd, con);
+    }
+    //Check if the event information is valid
+    private boolean checkInfo(JLabel[] eventOutput) {
+        System.out.println(eventNum);
+        return true;
     }
 }

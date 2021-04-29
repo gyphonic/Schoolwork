@@ -1,8 +1,8 @@
-Event number: 13
-Guests: 
-Phone: 
-Entree: 
-First side: 
-Second side: 
-Dessert: 
-Price: $0
+Event number: test
+Guests: 12
+Phone: test
+Entree: Steak
+First side: Macaroni
+Second side: Macaroni
+Dessert: Angel food cake
+Price: $420

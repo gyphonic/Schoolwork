@@ -242,116 +242,110 @@ public class JCarlysCatering extends JFrame {
         add(todd, con);
 
         //ActionListener to save files
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    OutputStream output;
-                    BufferedWriter writer;
-                    if (SAVEFILE.toFile().exists()) {
-                        output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, TRUNCATE_EXISTING));
-                    } else {
-                        output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, CREATE));
-                    }
-                    writer = new BufferedWriter(new OutputStreamWriter(output));
-                    for (JLabel i : eventOutput) {
-                        String s = i.getText();
-                        writer.write(s, 0, i.getText().length());
-                        writer.newLine();
-                    }
-                    writer.close();
-                    warning.setText("Saved to: " + SAVEFILE.getFileName());
-                } catch (IOException i) {
-                    System.out.println("IO error" + i);
+        saveButton.addActionListener(z -> {
+            try {
+                OutputStream output;
+                BufferedWriter writer;
+                if (SAVEFILE.toFile().exists()) {
+                    output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, TRUNCATE_EXISTING));
+                } else {
+                    output = new BufferedOutputStream(Files.newOutputStream(SAVEFILE, CREATE));
                 }
+                writer = new BufferedWriter(new OutputStreamWriter(output));
+                for (JLabel i : eventOutput) {
+                    String s = i.getText();
+                    writer.write(s, 0, s.length());
+                    writer.newLine();
+                }
+                writer.close();
+                warning.setText("Saved to: " + SAVEFILE.getFileName());
+            } catch (IOException i) {
+                System.out.println("IO error" + i);
             }
         });
 
         //Update event information output when the update button is pressed
         //Checks to see if the information entered is somewhat valid
-        updateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                //Update event num, make sure it's not too long
-                eventNum = eventNumInput.getText();
-                if (eventNum.length() < 10) {
-                    eventOutput[0].setText("Event number: " + eventNum);
-                    validEventNum = true;
-                } else {
-                    eventOutput[0].setText("Event number: ");
-                    validEventNum = false;
-                }
-                //Update guest Num
-                //Hacky way to check if the guest number entered is a number
-                for (char c : guestNumInput.getText().toCharArray()) {
-                    if (Character.isDigit(c)) {
-                        validGuestnum = true;
-                    } else {
-                        validGuestnum = false;
-                        break;
-                    }
-                }
-                if (validGuestnum) {
-                    guestNum = Integer.parseInt(guestNumInput.getText());
-                    eventOutput[1].setText("Guests: " + guestNum);
-                } else {
-                    eventOutput[1].setText("Guests: ");
-                }
-                //Update phone num, make sure it's not too long as well
-                phoneNum = phoneNumInput.getText();
-                if (phoneNum.length() < 14) {
-                    eventOutput[2].setText("Phone: " + phoneNum);
-                    validPhoneNum = true;
-                } else {
-                    eventOutput[2].setText("Phone: ");
-                    validPhoneNum = false;
-                }
-                //Check for entree choice
-                if (entreeInput.getSelectedIndex() == 0) {
-                    eventOutput[3].setText("Entree: ");
-                    validEntree = false;
-                } else {
-                    eventOutput[3].setText("Entree: " + entreeInput.getSelectedItem().toString());
-                    validEntree = true;
-                }
-                //Check for first side choice
-                if (side1Input.getSelectedIndex() == 0) {
-                    eventOutput[4].setText("First side: ");
-                    validSide1 = false;
-                } else {
-                    eventOutput[4].setText("First side: " + side1Input.getSelectedItem().toString());
-                    validSide1 = true;
-                }
-                //Check for second side choice
-                if (validSide1 || side2Input.getSelectedIndex()!= 0) {
-                    eventOutput[5].setText("Second side: " + side2Input.getSelectedItem().toString());
-                    validSide2 = true;
-                } else {
-                    eventOutput[5].setText("Second side: ");
-                }
-                //Check for dessert choice
-                if (dessertInput.getSelectedIndex() == 0) {
-                    eventOutput[6].setText("Dessert: ");
-                    validDessert = false;
-                } else {
-                    eventOutput[6].setText("Dessert: " + dessertInput.getSelectedItem().toString());
-                    validDessert = true;
-                }
-                //Set total price in output
-                totalCost = guestNum * PRICE_PER_GUEST;
-                eventOutput[7].setText("Price: $" + totalCost);
-                //If all values are valid, notify the user that data is ready to be saved
-                missingInfo = checkInfo();
-                if (!missingInfo) {
-                    warning.setText("Ready to save to file");
-                    saveButton.setEnabled(true);
-                } else {
-                    warning.setText("Missing information");
-                    saveButton.setEnabled(false);
-                }
-                validate();
-                repaint();
+        updateButton.addActionListener(y -> {
+            //Update event num, make sure it's not too long
+            eventNum = eventNumInput.getText();
+            if (eventNum.length() < 10) {
+                eventOutput[0].setText("Event number: " + eventNum);
+                validEventNum = true;
+            } else {
+                eventOutput[0].setText("Event number: ");
+                validEventNum = false;
             }
+            //Update guest Num
+            //Hacky way to check if the guest number entered is a number
+            for (char c : guestNumInput.getText().toCharArray()) {
+                if (Character.isDigit(c)) {
+                    validGuestnum = true;
+                } else {
+                    validGuestnum = false;
+                    break;
+                }
+            }
+            if (validGuestnum) {
+                guestNum = Integer.parseInt(guestNumInput.getText());
+                eventOutput[1].setText("Guests: " + guestNum);
+            } else {
+                eventOutput[1].setText("Guests: ");
+            }
+            //Update phone num, make sure it's not too long as well
+            phoneNum = phoneNumInput.getText();
+            if (phoneNum.length() < 14) {
+                eventOutput[2].setText("Phone: " + phoneNum);
+                validPhoneNum = true;
+            } else {
+                eventOutput[2].setText("Phone: ");
+                validPhoneNum = false;
+            }
+            //Check for entree choice
+            if (entreeInput.getSelectedIndex() == 0) {
+                eventOutput[3].setText("Entree: ");
+                validEntree = false;
+            } else {
+                eventOutput[3].setText("Entree: " + entreeInput.getSelectedItem().toString());
+                validEntree = true;
+            }
+            //Check for first side choice
+            if (side1Input.getSelectedIndex() == 0) {
+                eventOutput[4].setText("First side: ");
+                validSide1 = false;
+            } else {
+                eventOutput[4].setText("First side: " + side1Input.getSelectedItem().toString());
+                validSide1 = true;
+            }
+            //Check for second side choice
+            if (validSide1 || side2Input.getSelectedIndex() != 0) {
+                eventOutput[5].setText("Second side: " + side2Input.getSelectedItem().toString());
+                validSide2 = true;
+            } else {
+                eventOutput[5].setText("Second side: ");
+            }
+            //Check for dessert choice
+            if (dessertInput.getSelectedIndex() == 0) {
+                eventOutput[6].setText("Dessert: ");
+                validDessert = false;
+            } else {
+                eventOutput[6].setText("Dessert: " + dessertInput.getSelectedItem().toString());
+                validDessert = true;
+            }
+            //Set total price in output
+            totalCost = guestNum * PRICE_PER_GUEST;
+            eventOutput[7].setText("Price: $" + totalCost);
+            //If all values are valid, notify the user that data is ready to be saved
+            missingInfo = checkInfo();
+            if (!missingInfo) {
+                warning.setText("Ready to save to file");
+                saveButton.setEnabled(true);
+            } else {
+                warning.setText("Missing information");
+                saveButton.setEnabled(false);
+            }
+            validate();
+            repaint();
         });
 
     }

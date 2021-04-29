@@ -2,12 +2,11 @@ package CSC335.SammysRentals;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.*;
+import java.math.BigDecimal;
 import java.nio.file.*;
 
-import static java.awt.GridBagConstraints.NONE;
+import static java.awt.GridBagConstraints.*;
 import static java.nio.file.StandardOpenOption.*;
 
 //Todd Mills
@@ -40,10 +39,21 @@ public class JSammysSeashore extends JFrame {
 
     //Rental info
     private boolean missingInfo = true;
+    private boolean validRentalNum = false;
+    private boolean validHours = false;
+    private boolean validEquipment = false;
+    private String rentalNum;
+    private double rentalHours;
+    private int equipType;
+    private boolean lessonWithRental;
+    private int finalPrice = 0;
     private final String[] EQUIPMENT = {"Personal watercraft", "Pontoon boat", "Rowboat", "Canoe", "Kayak",
-            "Beach chair", "Umbrella"};
+                                        "Beach chair", "Umbrella"};
     private final int[] PRICES = {40, 40, 20, 20, 20, 7, 7};
     private final int LESSON_PRICE = 5;
+    private final String[] rentalOutputText = {"Rental Number: ","Rental Hrs: ", "Equipment rented: ",
+                                            "Lesson? ", "Price: $"};
+
 
     //Constructor
     public JSammysSeashore() {
@@ -62,8 +72,8 @@ public class JSammysSeashore extends JFrame {
         setLayout(new GridBagLayout());
         GridBagConstraints con = new GridBagConstraints();
         con.insets = GLOBAL;
-        con.fill = GridBagConstraints.HORIZONTAL;
-        con.anchor = GridBagConstraints.CENTER;
+        con.fill = HORIZONTAL;
+        con.anchor = CENTER;
 
         //Build components
         createFrame(con);
@@ -116,7 +126,7 @@ public class JSammysSeashore extends JFrame {
         //Equipment type combo box
         JLabel equipmentTypeLabel = new JLabel("Equipment rented:");
         equipmentTypeLabel.setFont(PLAIN);
-        JComboBox equipmentTypeInput = new JComboBox();
+        JComboBox<String> equipmentTypeInput = new JComboBox<String>();
         equipmentTypeInput.addItem("");
         for (int i = 0; i < EQUIPMENT.length; i++) {
             equipmentTypeInput.addItem(EQUIPMENT[i] + " $" + PRICES[i]);
@@ -135,32 +145,30 @@ public class JSammysSeashore extends JFrame {
         con.gridx = 0;
         con.gridy++;
         add(lessonLabel, con);
-        con.fill = GridBagConstraints.CENTER;
+        con.fill = CENTER;
+        con.anchor = LINE_START;
         con.gridx = 2;
         add(lessonBox, con);
 
         //Rental info output
         JLabel outputHeader = new JLabel("Rental info");
         outputHeader.setFont(SUBHEADING);
-        con.fill = GridBagConstraints.HORIZONTAL;
+        con.fill = HORIZONTAL;
+        con.anchor = LINE_START;
         con.gridwidth = 3;
         con.gridx = 0;
         con.gridy++;
         add(outputHeader, con);
         JLabel[] rentalOutput = new JLabel[5];
-        rentalOutput[0] = new JLabel("Rental Number: ");
-        rentalOutput[1] = new JLabel("Rental Hrs: ");
-        rentalOutput[2] = new JLabel("Equipment rented: ");
-        rentalOutput[3] = new JLabel("Lesson? ");
-        rentalOutput[4] = new JLabel("Price: $");
-        for (JLabel l : rentalOutput) {
+        for (int i = 0; i < rentalOutput.length; i++) {
             con.gridy++;
-            l.setFont(PLAIN);
-            add(l, con);
+            rentalOutput[i] = new JLabel(rentalOutputText[i]);
+            rentalOutput[i].setFont(PLAIN);
+            add(rentalOutput[i], con);
         }
 
         //Notify the user of missing information
-        JLabel warning = new JLabel("*Missing information*");
+        JLabel warning = new JLabel("Missing information");
         warning.setFont(PLAIN);
         con.gridx = 1;
         con.gridy++;
@@ -191,17 +199,85 @@ public class JSammysSeashore extends JFrame {
         add(todd, con);
 
         //ActionListener to save files
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-
+        saveButton.addActionListener(z -> {
+            if (!missingInfo) {
+                try {
+                    OutputStream output;
+                    BufferedWriter writer;
+                    if (SAVEFILE.toFile().exists()) {
+                        output = new BufferedOutputStream((Files.newOutputStream(SAVEFILE, TRUNCATE_EXISTING)));
+                    } else {
+                        output = new BufferedOutputStream((Files.newOutputStream(SAVEFILE, CREATE)));
+                    }
+                    writer = new BufferedWriter(new OutputStreamWriter(output));
+                    for (JLabel i : rentalOutput) {
+                        String s = i.getText();
+                        writer.write(s, 0, s.length());
+                        writer.newLine();
+                    }
+                    writer.close();
+                } catch (IOException i) {
+                    System.out.println("IO error" + i);
+                }
             }
         });
         //ActionListener to update the frame
-        updateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-
+        updateButton.addActionListener(y -> {
+            //Check if a rental number was entered and is not crazy long
+            rentalNum = rentalNumInput.getText();
+            if (rentalNum.length() < 10) {
+                rentalOutput[0].setText(rentalOutputText[0] + rentalNum);
+                validRentalNum = true;
+            } else {
+                rentalOutput[0].setText(rentalOutputText[0]);
+                validRentalNum = false;
+            }
+            //Check to see if the hour amount entered is valid and not ridiculous as well
+            for (char c : rentalTimeInput.getText().toCharArray()) {
+                if (Character.isDigit(c) || c == '.') {
+                    validHours = true;
+                } else {
+                    validHours = false;
+                    break;
+                }
+            }
+            if (validHours) {
+                rentalHours = Double.parseDouble(rentalTimeInput.getText());
+                rentalOutput[1].setText(rentalOutputText[1] + rentalHours);
+            } else {
+                rentalOutput[1].setText(rentalOutputText[1]);
+            }
+            //Check to see if an equipment type was selected
+            if (equipmentTypeInput.getSelectedIndex() == 0) {
+                rentalOutput[2].setText(rentalOutputText[2]);
+                validEquipment = false;
+            } else {
+                equipType = equipmentTypeInput.getSelectedIndex() + 1;
+                rentalOutput[2].setText(rentalOutputText[2] + EQUIPMENT[equipType]);
+                validEquipment = true;
+            }
+            //Update the lesson field
+            if (lessonBox.isSelected()) {
+                rentalOutput[3].setText(rentalOutputText[3] + "Yes");
+                lessonWithRental = true;
+            } else {
+                rentalOutput[3].setText(rentalOutputText[3] + "No");
+                lessonWithRental = false;
+            }
+            //Update the final price
+            if (lessonWithRental) {
+                finalPrice = Math.toIntExact(Math.round(rentalHours * PRICES[equipType] + 7));
+            } else {
+                finalPrice = Math.toIntExact(Math.round(rentalHours * PRICES[equipType]));
+            }
+            rentalOutput[4].setText(rentalOutputText[4] + finalPrice);
+            //If all the req info is entered, allow the user to save information to file
+            if (validEquipment && validHours && validRentalNum) {
+                missingInfo = false;
+                warning.setText("Ready to save");
+            } else {
+                missingInfo = true;
+                warning.setText("Missing info");
             }
         });
     }

@@ -5,9 +5,7 @@ Main repo for some of my schoolwork and online classwork.
 
 
 **CSC335**
-
-
-Repository for my work in CSC335, or Java II.
+Java II
 
 Projects include:
 
@@ -17,9 +15,7 @@ Sammy's Rentals, a fictional equipment rental business.
 CardDemo, a program that deals, sorts, and lists cards in 4 hands.
 
 **CSC350**
-
-
-Repo for my work in CSC350, or Mobile App.
+Mobile App
 
 Projects include: 
 

@@ -1,5 +1,5 @@
 # Schoolwork
-Main repo for all my schoolwork and online classwork.
+Main repo for some of my schoolwork and online classwork.
 
 **Includes:**
 
@@ -16,13 +16,11 @@ Carly's Catering, a fictional catering business.
 Sammy's Rentals, a fictional equipment rental business.
 CardDemo, a program that deals, sorts, and lists cards in 4 hands.
 
-**Oracle**
+**CSC350**
 
 
-Repo for my work torwards the Java professional developer certification.
+Repo for my work in CSC350, or Mobile App.
 
+Projects include: 
 
-Projects include:
-
-
-Product/Shop, a set of files meant to simulate a department store's inventory system.
+IRL Bug Tracker, a mobile page for tracking the care of pet insects

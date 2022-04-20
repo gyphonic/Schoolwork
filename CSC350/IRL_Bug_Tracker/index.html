@@ -1,0 +1,785 @@
+<!--
+  Assignment: Week 5 Lab
+  Author: Todd Mills
+  Date: 4/9/22
+  Purpose: To track bugs!
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title> &#x1F41C; IRL Bug Tracker</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- JavaScript -->
+  <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+</head>
+
+<body>
+
+  <!-- Login Page -->
+  <div data-role="page" id="login-page">
+    <div data-role="header" id="header">
+      <h1>Login</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+
+      <!-- Login page displayed for new users-->
+      <div id="new-login">
+        <p>Set a pin number:</p>
+        <input type="password" id="pin-entry" placeholder="4-8 digits">
+
+        <div id="numpad">
+          <div data-role="controlgroup" data-type="horizontal">
+            <a data-role="button" onclick="addValueToPassword(7)">7</a>
+            <a data-role="button" onclick="addValueToPassword(8)">8</a>
+            <a data-role="button" onclick="addValueToPassword(9)">9</a>
+          </div>
+
+          <div data-role="controlgroup" data-type="horizontal">
+            <a data-role="button" onclick="addValueToPassword(4)">4</a>
+            <a data-role="button" onclick="addValueToPassword(5)">5</a>
+            <a data-role="button" onclick="addValueToPassword(6)">6</a>
+          </div>
+
+          <div data-role="controlgroup" data-type="horizontal">
+            <a data-role="button" onclick="addValueToPassword(1)">1</a>
+            <a data-role="button" onclick="addValueToPassword(2)">2</a>
+            <a data-role="button" onclick="addValueToPassword(3)">3</a>
+          </div>
+
+          <div data-role="controlgroup" data-type="horizontal">
+            <a data-role="button" onclick="addValueToPassword(0)">0</a>
+            <a data-role="button" onclick="addValueToPassword('back')" data-icon="delete">Back</a>
+          </div>
+        </div>
+
+        <div data-role="controlgroup">
+          <input type=button id="btn-enter" data-icon="arrow-r" value="Enter" data-iconpos="right">
+          <a href="#about-page-no-menu" data-role="button" data-icon="info" data-iconpos="right">About</a>
+
+          <!-- temporary button, will be removed w/ javascript-->
+          <a href="#disclaimer-page" data-role="button" data-icon="arrow-r" data-iconpos="right">Disclaimer</a>
+        </div>
+
+      </div>
+
+      <!-- Login to be displayed upon returning, functional with javascript calls
+
+      <div id="return-login-page">
+        <p>Enter your pin number:</p>
+
+        >>keypad with different function calls for evaluating a password will go here
+
+        <div data-role="controlgroup">
+          <a data-role="button" id="btnEnter" type="submit">Enter</a>
+          <a href="#about-page-no-menu" data-role="button">About</a>
+          <input type="button" id="forgot-password" value="Forgot PIN?" onclick="resetPIN()">
+        </div>
+
+      </div>
+      -->
+
+    </div>
+
+  </div>
+
+  <!-- About/info page, sans menu button for checking from the login screen, might remove w/ javascript -->
+  <div data-role="page" id="about-page-no-menu">
+
+    <div data-role="header">
+      <a href="#login-page" data-role="button" data-icon="arrow-l" data-iconpos="left">Return</a>
+      <h1>About IRL Bug Tracker</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+
+      <!--Getting started-->
+      <h2 class="ui-bar ui-bar-a">Getting started</h2>
+  
+      <ul>
+        <li>First, set up a profile. Enter your name, bug to track, and</li>
+        <li>Records can be added through the Form page, and veiwed under Trends or Records</li>
+        <li>Don't forget to check out the Suggestions page! It's full of useful information based on your past records.
+        </li>
+      </ul>
+  
+
+      <!--FAQs-->
+      <h2 class="ui-bar ui-bar-a ui-bar-icon">FAQ</h2>
+      <dl>
+        <dt>I forgot my password &#x1F627;</dt>
+        <dd>Thats okay! Just reset it from the Profile page, or use the Forgot PIN feature on the (coming soon) Login
+          page!</dd>
+        <dt>You're not funny &#x1F620;</dt>
+        <dd>&#x1F622;</dd>
+        <dt>I want to track more than one bug!</dt>
+        <dd>sucks, i guess</dd>
+        <dt>This is a dumb app for dumb people with a dumb topic</dt>
+        <dd>&#x1F614;</dd>
+      </dl>
+    
+
+      <!--Future planning-->
+      <h2 class="ui-bar ui-bar-a">App Development Roadmap</h2>
+      <p><b>TO DO:</b></p>
+      <ul>
+        <li>Javascript functionality</li>
+        <li>Returning login page</li>
+        <li>Track more than one bug???</li>
+        <li>Maybe some color other than grey</li>
+        <li>Microtransactions/cash shop</li>
+        <li>Find some actual jokes</li>
+      </ul>
+
+      <!--About us-->
+      <h2 class="ui-bar ui-bar-a">Thanks for choosing our app!</h2>
+      <p>
+        Welcome to [store name], your number one source for all things [product, ie: shoes, bags, dog treats]. We're
+        dedicated to giving you the very best of [product], with a focus on [three characteristics, ie: dependability,
+        customer service and uniqueness.]
+      </p>
+      <p>
+        Founded in [year] by [founder's name], [store name] has come a long way from its beginnings in a [starting
+        location, ie: home office, toolshed, Houston, TX.]. When [store founder] first started out, his/her passion for
+        [passion of founder, ie: helping other parents be more eco-friendly, providing the best equipment for his fellow
+        musicians] drove him to [action, ie: do intense research, quit her day job], and gave him the impetus to turn
+        hard work and inspiration into to a booming online store. We now serve customers all over [place, ie: the US,
+        the world, the Austin area], and are thrilled to be a part of the [adjective, ie: quirky, eco-friendly, fair
+        trade] wing of the [industry type, ie: fashion, baked goods, watches] industry.
+      </p>
+      <img src="img/company.jpg" alt="employees around table" width="100">
+      <p>
+        We hope you enjoy our products as much as we enjoy offering them to you. If you have any questions or comments,
+        please don't hesitate to contact us.
+      </p>
+      <p>
+        Sincerely,
+        Name, [title, ie: CEO, Founder, etc.]
+      </p>
+
+    </div>
+
+
+  </div>
+
+  <!-- About Page -->
+  <div data-role="page" id="about-page">
+
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <h1>About IRL Bug Tracker</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+
+      <!--Getting started-->
+      <h2 class="ui-bar ui-bar-a">Getting started</h2>
+
+      <ul>
+        <li>First, set up a profile. Enter your name, bug to track, and</li>
+        <li>Records can be added through the Form page, and veiwed under Trends or Records</li>
+        <li>Don't forget to check out the Suggestions page! It's full of useful information based on your past records.
+        </li>
+      </ul>
+  
+      <!--FAQs-->
+      <h2 class="ui-bar ui-bar-a ui-bar-icon">FAQ</h2>
+      <dl>
+        <dt>I forgot my password &#x1F627;</dt>
+        <dd>Thats okay! Just reset it from the Profile page, or use the Forgot PIN feature on the (coming soon) Login
+          page!</dd>
+        <dt>You're not funny &#x1F620;</dt>
+        <dd>&#x1F622;</dd>
+        <dt>I want to track more than one bug!</dt>
+        <dd>sucks, i guess</dd>
+        <dt>This is a dumb app for dumb people with a dumb topic</dt>
+        <dd>&#x1F614;</dd>
+      </dl>
+
+      <!--Future planning-->
+      <h2 class="ui-bar ui-bar-a">App Development Roadmap</h2>
+      <p><b>TO DO:</b></p>
+      <ul>
+        <li>Javascript functionality</li>
+        <li>Returning login page</li>
+        <li>Track more than one bug???</li>
+        <li>Maybe some color other than grey</li>
+        <li>Microtransactions/cash shop</li>
+        <li>Find some actual jokes</li>
+      </ul>
+
+      <!--About us-->
+      <h2 class="ui-bar ui-bar-a">Thanks for choosing our app!</h2>
+      <p>
+        Welcome to [store name], your number one source for all things [product, ie: shoes, bags, dog treats]. We're
+        dedicated to giving you the very best of [product], with a focus on [three characteristics, ie: dependability,
+        customer service and uniqueness.]
+      </p>
+      <p>
+        Founded in [year] by [founder's name], [store name] has come a long way from its beginnings in a [starting
+        location, ie: home office, toolshed, Houston, TX.]. When [store founder] first started out, his/her passion for
+        [passion of founder, ie: helping other parents be more eco-friendly, providing the best equipment for his fellow
+        musicians] drove him to [action, ie: do intense research, quit her day job], and gave him the impetus to turn
+        hard work and inspiration into to a booming online store. We now serve customers all over [place, ie: the US,
+        the world, the Austin area], and are thrilled to be a part of the [adjective, ie: quirky, eco-friendly, fair
+        trade] wing of the [industry type, ie: fashion, baked goods, watches] industry.
+      </p>
+      <img src="img/company.jpg" alt="employees around table" width="100">
+      <p>
+        We hope you enjoy our products as much as we enjoy offering them to you. If you have any questions or comments,
+        please don't hesitate to contact us.
+      </p>
+      <p>
+        Sincerely,
+        Name, [title, ie: CEO, Founder, etc.]
+      </p>
+
+    </div>
+
+
+  </div>
+
+  <!-- Disclaimer Page -->
+  <div data-role="page" id="disclaimer-page">
+
+    <div data-role="header">
+      <h1>Disclaimer</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <p>
+        Do not remove this disclaimer under penalty of law.
+        For optimum performance and safety, please read these instructions carefully.
+      </p>
+      <p>
+        Void where prohibited. No representation or warranty, express or implied, with respect to the completeness,
+        accuracy, fitness for a particular purpose, or utility of these materials or any information or opinion
+        contained
+        herein. Actual mileage may vary. Prices slightly higher west of the Mississippi. All models over 18 years of
+        age.
+        No animals were harmed during the production of this product. Any resemblance to actual people, living or dead,
+        or
+        events, past, present or future, is purely coincidental. This product not to be construed as an endorsement of
+        any
+        product or company, nor as the adoption or promulgation of any guidelines, standards or recommendations. Some
+        names have been changed to protect the innocent. This product is meant for educational purposes only. Some
+        assembly required. Batteries not included. Package sold by weight, not volume. Contents may settle during
+        shipment. No user-serviceable parts inside. Use only as directed.
+      </p>
+      <p>
+        Do not eat. Not a toy.
+      </p>
+      <p>
+        Postage will be paid by addressee. If condition persists, consult your physician. Subject to change without
+        notice. Times approximate. One size fits all. Colors may, in time, fade. For office use only. Edited for
+        television. List was current at time of printing. At participating locations only. Keep away from fire or flame.
+        Avoid contact with skin. Sanitised for your protection. Employees and their families are not eligible. Beware of
+        the dog. Limited time offer. No purchase necessary. Not recommended for children under 12. Prerecorded for this
+        time zone. Some of the trademarks mentioned in this product appear for identification purposes only. Freshest if
+        eaten before date on carton. Subject to change without notice. Please allow 4 to 6 weeks for delivery. Not
+        responsible for direct, indirect, incidental or consequential damages resulting from any defect, error or
+        failure
+        to perform. Slippery when wet. Substantial penalty for early withdrawal. For recreational use only. No Canadian
+        coins. List each check separately by bank number. This is not an offer to sell securities.
+      </p>
+      <p>
+        Read at your own risk. Ask your doctor or pharmacist. Parental guidance advised. Always read the label. Do not
+        use
+        while operating a motor vehicle or heavy equipment. Do not stamp. Breaking seal constitutes acceptance of
+        agreement. Contains non-milk fat. Date as postmark. Lost ticket pays maximum rate. Use only in well-ventilated
+        area. Price does not include taxes. Not for resale. Hand wash only. Keep away from sunlight. For a limited time
+        only. No preservatives or additives. Keep away from pets and small children. Safety goggles required during use.
+        If rash, irritation, redness, or swelling develops, discontinue use. Do not fold, spindle or mutilate. Please
+        remain seated until the web page has come to a complete stop. Refrigerate after opening. Flammable. Must be 18
+        years or older. Seat backs and tray tables must be in the upright position. Repeat as necessary. Do not look
+        directly into light. Avoid extreme temperatures and store in a cool dry place. No salt, MSG, artificial
+        colouring
+        or flavoring added. Reproduction strictly prohibited. Pregnant women, the elderly, and children should avoid
+        prolonged exposure to this product. If ingested, do not induce vomiting. May contain nuts. Objects in mirror may
+        be closer than they appear. Do not use if safety seal is broken.
+      </p>
+      <p>
+        Apply only to affected area. Do not use this product if you have high blood pressure, heart disease, diabetes,
+        thyroid disease, asthma, glaucoma, or difficulty in urination. May be too intense for some viewers. In case of
+        accidental ingestion, seek professional assistance or contact a poison control center immediately. Many
+        suitcases
+        look alike. Post office will not deliver without postage. Not the Beatles. Products are not authorized for use
+        as
+        critical components in life support devices or systems. Driver does not carry cash. Do not puncture or
+        incinerate.
+        Do not play your headset at high volume. Discontinue use of this product if any of the following occurs:
+        itching,
+        aching, vertigo, dizziness, ringing in your ears, vomiting, giddiness, aural or visual hallucinations, tingling
+        in
+        extremities, loss of balance or coordination, slurred speech, temporary blindness, drowsiness, insomnia, profuse
+        sweating, shivering, or heart palpitations. Video+ and Video- are at ECL voltage levels, HSYNC and VSYNC are at
+        TTL voltage levels. It is a violation of federal law to use this product in a manner inconsistent with its
+        labeling. Intentional misuse by deliberately concentrating and inhaling the contents can be harmful or fatal.
+        This
+        product has been shown to cause cancer in laboratory rats. Do not use the AC adaptor provided with this player
+        for
+        other products.
+      </p>
+      <p>
+        <strong>
+          DO NOT DELETE THIS LINE -- make depend depends on it.
+        </strong>
+      </p>
+      <p>
+        Warranty does not cover normal wear and tear, misuse, accident, lightning, flood, hail storm, tornado, tsunami,
+        volcanic eruption, avalanche, earthquake or tremor, hurricane, solar activity, meteorite strike, nearby
+        supernova
+        and other Acts of God, neglect, damage from improper or unauthorised use, incorrect line voltage, unauthorised
+        use, unauthorised repair, improper installation, typographical errors, broken antenna or marred cabinet, missing
+        or altered serial numbers, electromagnetic radiation from nuclear blasts, microwave ovens or mobile phones,
+        sonic
+        boom vibrations, ionising radiation, customer adjustments that are not covered in this list, and incidents owing
+        to an airplane crash, ship sinking or taking on water, motor vehicle crashing, dropping the item, falling rocks,
+        leaky roof, broken glass, disk failure, accidental file deletions, mud slides, forest fire, riots or other civil
+        unrest, acts of terrorism or war, whether declared or not, explosive devices or projectiles (which can include,
+        but may not be limited to, arrows, crossbow bolts, air gun pellets, bullets, shot, cannon balls, BBs, shrapnel,
+        lasers, napalm, torpedoes, ICBMs, or emissions of electromagnetic radiation such as radio waves, microwaves,
+        infra-red radiation, visible light, UV, X-rays, alpha, beta and gamma rays, neutrons, neutrinos, positrons,
+        N-rays, knives, stones, bricks, spit-wads, spears, javelins etc.).
+      </p>
+      <p>
+        Other restrictions may apply. Breach of these conditions is likely to cause unquantifiable loss that may not be
+        capable of remedy by the payment of damages.
+      </p>
+      <p>
+        <strong>
+          This supersedes all previous disclaimers
+        </strong>
+        Entire contents (c) 1999 by Our Group, Inc. This disclaimer is protected by copyright and its use, copying,
+        distribution and decompilation is restricted. All rights reserved. No part of this disclaimer or any attachments
+        may be copied or reproduced, stored in a retrieval system, or transmitted, in any form, or by any means,
+        optical,
+        electronic, mechanical, photocopying, recording, telepathic, or otherwise, without the express witnessed and
+        notarised prior written consent of the all holders of the relevant copyrights.
+      </p>
+      <p>
+        The information contained herein has been obtained from sources believed to be reliable. However, no warranty as
+        to the accuracy, completeness or adequacy of such information is implied. No liability is accepted for errors,
+        omissions or inadequacies in the information contained herein or for interpretations thereof. The reader assumes
+        sole responsibility for the selection of these materials to achieve its intended results. The opinions expressed
+        herein are subject to change without notice.
+      </p>
+      <p>
+        The information in this document and any attached files is strictly private and confidential and may also be
+        privileged. It is intended solely for and should be read only by the individual(s) or organisation(s) to whom or
+        which it is addressed. If you are not the intended recipient, or a person responsible for delivering it to the
+        intended recipient, notify the sender by return, delete the message, and destroy all copies of the email and
+        associated files in your possession; you are not authorised to and must not disclose, copy, distribute, or
+        retain
+        this message or any part of it. It may contain information that is confidential and/or covered by legal
+        professional or other privilege (or other rules or laws with similar effect in jurisdictions outside England and
+        Wales).
+      </p>
+      <p>
+        We have an anti-virus system installed on all our PCs and therefore any files leaving us via email will have
+        been
+        checked for known viruses, but are not guaranteed to be virus free. We accept no responsibility once an email
+        transmission and any attachments have left us.
+      </p>
+      <p>
+        No part of this message is intended to form any part of any contract. The views expressed in this message are
+        not
+        necessarily the views of my employer, and the company, its directors, officers or employees make no
+        representation
+        or accept any liability for its accuracy or completeness, unless expressly stated to the contrary. This message
+        is
+        not intended to be relied upon without subsequent written confirmation of its contents. This company therefore
+        shall not accept any liability of any kind which may arise from any person acting upon the contents of this
+        message without having had written confirmation.
+      </p>
+      <p>
+        This document originates from the Internet, and therefore may not be from the alleged source. If you have any
+        doubts about the origin or content of this document please contact our Support Desk.
+      </p>
+
+      <a href="#menu-page" id="noticeYes" data-role="button" data-icon="arrow-r" data-iconpos="right"
+        data-mini="false">Agree and continue</a>
+
+    </div>
+
+  </div>
+
+  <!-- TODO: User Information/Profile Page -->
+  <div data-role="page" id="user-page">
+
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
+      <h1>My Profile</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+
+      <form id="user-form">
+        <!--User info section-->
+        <h2 class="ui-bar ui-bar-a">User info:</h2>
+        <div data-role="fieldcontain">
+          <label for="txt-fname">First Name: </label>
+          <input type="text" placeholder="First Name" name="txt-fname" data-mini="false" id="txt-fname" value=""
+            required>
+        </div>
+
+        <div data-role="fieldcontain">
+          <label for="txt-lname">Last Name: </label>
+          <input type="text" placeholder="Last Name" name="txt-lname" data-mini="false" id="txt-lname" value=""
+            required>
+        </div>
+
+        <div data-role="fieldcontain">
+          <label for="txt-country">Country: </label>
+          <input type="text" name="txt-country" data-mini="false" id="txt-country" value="">
+        </div>
+
+        <div data-role="fieldcontain">
+          <label for="txt-ssn">SSN: </label>
+          <input type="text" placeholder="XXX-XX-XXXX" name="txt-ssn" data-mini="false" id="txt-ssn" value="">
+        </div>
+
+        <!--Bug section-->
+        <h2 class="ui-bar ui-bar-a">Bugs:</h2>
+        <h3 class="ui-bar ui-bar-a">Bug 1:</h3>
+        <div data-role="fieldcontain">
+          <label for="txt-bug1">Bug Name: </label>
+          <input type="text" name="txt-bug1" data-mini="false" id="txt-bug1" value="">
+        </div>
+
+        <div data-role="fieldcontain">
+          <label for="txt-bug1-type">Species: </label>
+          <input type="text" name="txt-bug1-type" data-mini="false" id="txt-bug1-type" value="">
+        </div>
+        
+        <div data-role="fieldcontain">
+          <input type="button" value="Add bug!" data-icon="plus" id="btn-new-bug">
+        </div>
+
+        <!--Password section-->
+        <h2 class="ui-bar ui-bar-a">Other:</h2>
+        <div data-role="fieldcontain">
+          <label for="change-pin">Edit PIN: </label>
+          <input type="password" placeholder="4-8 digits" name="change-pin" data-mini="false" id="change-pin" value="">
+        </div>
+
+        <div data-role="fieldcontain">
+          <input type="button" value="Apply changes" data-icon="check" id="btn-apply-changes">
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+  <!--  Menu Page -->
+  <div data-role="page" id="menu-page">
+    <div data-role="header">
+      <a href="#about-page" class="ui-btn-right" data-icon="info">Info</a>
+      <h1>Menu</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <a href="#form-page" data-role="button" data-icon="plus">Add Record</a>
+      <a href="#records-page" data-role="button" data-icon="bullets">Records</a>
+      <hr>
+      <a href="#graph-page" data-role="button" data-icon="action">Trends</a>
+      <a href="#suggestions-page" data-role="button" data-icon="edit">Suggestions</a>
+      <a href="#care-page" data-role="button" data-icon="heart">Care Sheets</a>
+      <hr>
+      <a href="#user-page" data-role="button" data-icon="home">Profile</a>
+      <a href="#login-page" data-role="button" data-icon="arrow-l">Logout</a>
+    </div>
+
+  </div>
+
+  <!-- Records Page -->
+  <div data-role="page" id="records-page">
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
+      <h1>Records</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <div data-role="fieldcontain" id="div-user-section">
+      </div>
+
+
+      <h3 class="ui-bar ui-bar-a">History</h3>
+      <div data-role="fieldcontain">
+        <table id="tbl-records" class="ui-responsive table-stroke">
+        </table>
+      </div>
+
+
+      <div data-role="fieldcontain">
+        <a href="#form-page" data-role="button" data-icon="plus">Add New Entry</a>
+        <a href="#" data-role="button" id="btn-clear-record" data-icon="delete">Clear History</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TODO: Record Form Page -->
+  <div data-role="page" id="form-page">
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
+      <h1>Add Record</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <form id="form-new-record">
+        <div data-role="fieldcontain">
+          <div data-role="fieldcontain">
+            <label for="date-new-record">Date: </label>
+            <input type="date" id="date-new-record" data-mini="false" name="date-new-record" value="" required>
+
+            <label for="time-new-record">Time: </label>
+            <input type="time" id="time-new-record" data-mini="false" name="time-new-record" value="" required>
+          </div>
+          <hr>
+
+          <div data-role="fieldcontain">
+            <label for="select-bug">Bug: </label>
+            <select name="select-bug" id="select-bug" data-mini="false">
+              <option>Select Bug</option>
+              <option value="bug-1">Bug 1</option>
+            </select>
+
+            <label for="range-food">Food: </label>
+            <input type="range" id="range-food" min="0" max="5" data-mini="false" name="range-food">
+
+            <label for="range-water">Water: </label>
+            <input type="range" id="range-water" min="0" max="5" data-mini="false" name="range-water">
+
+            <label for="range-mood">Mood: </label>
+            <input type="range" id="range-mood" min="0" max="5" data-mini="false" name="range-mood">
+          </div>
+          <hr>
+
+          <div data-role="fieldcontain">
+            <input type="button" id="btn-record-new-bug" value="Add bug" data-mini="false" data-icon="plus">
+          </div>
+          <hr>
+
+          <div data-role="fieldcontain">
+            <input type="reset" value="Clear" data-icon="delete" id="btn-record-clear" data-mini="false">
+            <input type="submit" value="Submit" data-icon="check" id="btn-record-submit" data-mini="false">
+          </div>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+  <!-- Graph Page, currently nonfunctional -->
+  <div data-role="page" id="graph-page">
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
+      <h1>Trends</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <div class="panel panel-success">
+        <div class="panel-heading">
+          <h3 class="panel-title ui-bar ui-bar-a">Food</h3>
+        </div>
+
+        <div class="panel-body">
+          <canvas id="canvas-food"></canvas>
+        </div>
+      </div>
+
+      <div class="panel panel-success">
+        <div class="panel-heading">
+          <h3 class="panel-title ui-bar ui-bar-a">Water</h3>
+        </div>
+
+        <div class="panel-body">
+          <canvas id="canvas-water"></canvas>
+        </div>
+      </div>
+
+      <div class="panel panel-success">
+        <div class="panel-heading">
+          <h3 class="panel-title ui-bar ui-bar-a">Mood</h3>
+        </div>
+
+        <div class="panel-body">
+          <canvas id="canvas-mood"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Suggestions page, currently nonfunctional-->
+  <div data-role="page" id="suggestions-page">
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
+      <h1>Suggestions</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <div class="panel panel-success">
+        <div class="panel-heading">
+          <h3 class="panel-title ui-bar ui-bar-a">Reccomendations</h3>
+        </div>
+
+        <div class="panel-body">
+          <canvas id="canvas-advice"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Care Sheets -->
+  <div data-role="page" id="care-page">
+    <div data-role="header">
+      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
+      <h1>Care Sheets</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <p>Included below are simple care sheets for some of the most common pet bugs</p>
+
+      <h2 class="ui-bar ui-bar-a">Ant</h2>
+      <img class="bugs" src="img/ant.jpg" alt="ant" height="400">
+      <p>
+        Ants are eusocial insects of the family Formicidae and, along with the related wasps and bees, belong to the
+        order Hymenoptera. Ants appear in the fossil record across the globe in considerable diversity during the latest
+        Early Cretaceous and early Late Cretaceous, suggesting an earlier origin. Ants evolved from vespoid wasp
+        ancestors in the Cretaceous period, and diversified after the rise of flowering plants. More than 13,800 of an
+        estimated total of 22,000 species have been classified. They are easily identified by their geniculate (elbowed)
+        antennae and the distinctive node-like structure that forms their slender waists.
+      </p>
+      <h3>Care</h3>
+      <p>Food: idk like dirt and leaves or something</p>
+      <P>Temp: they live outside so who cares</P>
+      <p>Other: They should stay outside</p>
+
+
+      <h2 class="ui-bar ui-bar-a">Bug</h2>
+      <img class="bugs" src="img/bug.webp" alt="lost frog" height="400">
+      <p>
+        Ceratophrys is a genus of frogs in the family Ceratophryidae. They are also known as South American horned frogs
+        as well as Pacman frogs due to their characteristic round shape and large mouth, reminiscent of the video game
+        character Pac-Man.
+      </p>
+      <h3>Care</h3>
+      <p>Food: ant</p>
+      <P>Temp: mud</P>
+      <p>Other: slimy</p>
+
+      <h2 class="ui-bar ui-bar-a">Lil' Ouchy</h2>
+      <img class="bugs" src="img/lilouchy.webp" alt="house centipede" height="400">
+      <p>
+        Scutigera coleoptrata, also known as the house centipede, is a species of centipede that is typically
+        yellowish-grey and has up to 15 pairs of long legs. Originating in the Mediterranean region, it has spread to
+        other parts of the world, where it can live in human homes. It is an insectivore; it kills and eats other
+        arthropods, such as insects and arachnids.
+      </p>
+      <h3>Care</h3>
+      <p>Food: PB&J</p>
+      <P>Temp: 60 - 80 degrees F should be fine.</P>
+      <p>Other: Has self-esteem issues.</p>
+
+      <h2 class="ui-bar ui-bar-a">Snuggles</h2>
+      <img class="bugs" src="img/snuggles.webp" alt="wolf spider" height="400">
+      <p>
+        Wolf spiders are members of the family Lycosidae (from Ancient Greek λύκος (lúkos) 'wolf'). They are robust and
+        agile hunters with excellent eyesight. They live mostly in solitude, hunt alone, and do not spin webs. Some are
+        opportunistic hunters, pouncing upon prey as they find it or chasing it over short distances; others wait for
+        passing prey in or near the mouth of a burrow.
+      </p>
+      <h3>Care</h3>
+      <p>Food: They live only on UwUs and hugs</p>
+      <P>Temp: Not too hot!</P>
+      <p>Other: Needs an excellent support structure-based enviroment. Likes touch football.</p>
+
+      <h2 class="ui-bar ui-bar-a">Sneezy</h2>
+      <img class="bugs" src="img/sneezy.jpg" alt="pholcidae" height="400">
+      <p>
+        The Pholcidae are a family of araneomorph spiders. The family contains over 1,800 individual species of
+        pholcids, including those commonly known as cellar spider, daddy long-legs spider, carpenter spider, daddy
+        long-legger, vibrating spider, gyrating spider, long daddy, and skull spider. The family, first described by
+        Carl Ludwig Koch in 1850, is divided into 94 genera.
+
+        The common name "daddy long-legs" is used for several species, especially Pholcus phalangioides, but is also the
+        common name for several other arthropod groups, including harvestmen and crane flies.
+      </p>
+      <h3>Care</h3>
+      <p>Food: Never seen them eat anything.</p>
+      <P>Temp: Whatever, they like it inside houses.</P>
+      <p>Other: Makes a mess. Forgets his Social Security number often.</p>
+
+      <h2 class="ui-bar ui-bar-a">Evil Snuggles</h2>
+      <img class="bugs" src="img/evilsnuggles.jpg" alt="wolf spider but rotated and colorshifted" height="400">
+      <p>
+        passing prey in or near the mouth of a burrow.
+        opportunistic hunters, pouncing upon prey as they find it or chasing it over short distances; others wait for
+        agile hunters with excellent eyesight. They live mostly in solitude, hunt alone, and do not spin webs. Some are
+        Wolf spiders are members of the family Lycosidae (from Ancient Greek λύκος (lúkos) 'wolf'). They are robust and
+      </p>
+      <h3>Care</h3>
+      <p>Food: Whatever you are eating. He wants it. Give it to him or he will cut you.</p>
+      <P>Temp: 69 degrees</P>
+      <p>Other: Will take your credit card and buy lottery tickets</p>
+
+      <h2 class="ui-bar ui-bar-a">Roach</h2>
+      <img class="bugs" src="img/roach.jpeg" alt="some dude in a roach costume" height="400">
+      <p>
+        Cockroaches (or roaches) are insects of the order Blattodea, which also includes termites. About 30
+        cockroach species out of 4,600 are associated with human habitats. Some species are well-known as pests.
+
+        The cockroaches are an ancient group, with ancestors originating during the Carboniferous period, some 300–350
+        million years ago. Those early ancestors, however, lacked the internal ovipositors of modern roaches.
+        Cockroaches are somewhat generalized insects lacking special adaptations (such as the sucking mouthparts of
+        aphids and other true bugs); they have chewing mouthparts and are likely among the most primitive of living
+        Neopteran insects. They are common and hardy insects capable of tolerating a wide range of climates, from Arctic
+        cold to tropical heat. Tropical cockroaches are often much larger than temperate species. Contrary to popular
+        belief, extinct cockroach relatives (Blattoptera) and 'roachoids' such as the Carboniferous Archimylacris and
+        Apthoroblattina were not as large as the biggest modern species.
+
+        Some species, such as the gregarious German cockroach, have an elaborate social structure involving common
+        shelter, social dependence, information transfer and kin recognition. Cockroaches have appeared in human culture
+        since classical antiquity. They are popularly depicted as dirty pests, although the majority of species are
+        inoffensive and live in a wide range of habitats around the world.
+      </p>
+      <h3>Care</h3>
+      <p>Food: Anything. Diapers, bones, and fresh fruit</p>
+      <P>Temp: Anything from nuclear winter to nuclear explosion should be fine.</P>
+      <p>Other: Gross!!</p>
+
+      <!-- will be changed to a "back to top" button-->
+      <a href="#menu-page" data-role="button">Menu</a>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

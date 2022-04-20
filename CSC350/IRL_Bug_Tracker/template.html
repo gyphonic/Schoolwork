@@ -1,0 +1,94 @@
+<!--
+  Assignment: 
+  Author: 
+  Date: 
+  Purpose: 
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Change Me</title>
+
+    <link
+      rel="stylesheet"
+      href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css"
+    />
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+  </head>
+  <body>
+    <!--
+      This will create a single page for your app    
+      There should be at least one page in each HTML file of your app
+    -->
+    <div data-role="page">
+      <!--
+        This will create a main heading bar at the top of the app
+        This may be left out if it isn't needed for your app
+      -->
+      <div data-role="header">
+        <h1>Sample Heading</h1>
+      </div>
+
+      <!--
+        This will create a navigation bar for your app
+        This may be left out if it isn't needed for your app
+        Your navbar could also be placed before the header, in the header,
+        and/or in the footer
+      -->
+      <div data-role="navbar">
+        <ul>
+          <li>
+            <!--
+              Make sure these classes are only used on the element representing
+              the current page.  Example: When you make the second page the 
+              classes would be on the element of the link for the second page
+              and removed from this element.
+              
+              Refer to my projectile app example if you want to see this fully
+              implemented on an app with two HTML files.
+            -->
+            <a href="../" class="ui-btn-active ui-state-persist">
+              Home - Change Me</a
+            >
+          </li>
+          <li>
+            <!--
+              The href in your app would need to be updated to the file that it
+              links to.  In this version, it will just reload the page and show
+              this as the active link when clicked since I don't have a second
+              page right now in my app.
+            -->
+            <a href="#">Second Page (Not currently available)</a>
+          </li>
+        </ul>
+      </div>
+
+      <!--
+        This is the main content of the app on this page
+        This should be included in each page div
+      -->
+      <div data-role="main" class="ui-content">
+        <p>Sample text in the content</p>
+      </div>
+
+      <!--
+        This will create a bar at the bottom of the app after the content
+        This may be left out if it isn't need for your app
+      -->
+      <div data-role="footer">
+        <p>
+          Sample text in the footer. <small>This is small footer text.</small>
+        </p>
+      </div>
+    </div>
+
+    <!--
+      Custom JavaScript should come at the end of the body to
+      ensure the page content is loaded first.
+    -->
+    <script src="script.js"></script>
+  </body>
+</html>

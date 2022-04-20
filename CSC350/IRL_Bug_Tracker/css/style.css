@@ -1,0 +1,11 @@
+/*
+  Name: Todd Mills
+  Date: 4/9/22
+  Assignment: Week 5 Lab
+*/
+
+#canvas-food, #canvas-water, #canvas-mood, #canvas-advice {
+  border: 1px solid #000000;
+  height: 500px;
+  width:100%;
+}

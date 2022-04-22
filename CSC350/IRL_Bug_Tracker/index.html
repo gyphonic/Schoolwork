@@ -58,7 +58,7 @@
 
           <div data-role="controlgroup" data-type="horizontal">
             <a data-role="button" onclick="addValueToPassword(0)">0</a>
-            <a data-role="button" onclick="addValueToPassword('back')" data-icon="delete">Back</a>
+            <a data-role="button" onclick="addValueToPassword('bksp')" data-icon="delete">Back</a>
           </div>
         </div>
 
@@ -71,22 +71,6 @@
         </div>
 
       </div>
-
-      <!-- Login to be displayed upon returning, functional with javascript calls
-
-      <div id="return-login-page">
-        <p>Enter your pin number:</p>
-
-        >>keypad with different function calls for evaluating a password will go here
-
-        <div data-role="controlgroup">
-          <a data-role="button" id="btnEnter" type="submit">Enter</a>
-          <a href="#about-page-no-menu" data-role="button">About</a>
-          <input type="button" id="forgot-password" value="Forgot PIN?" onclick="resetPIN()">
-        </div>
-
-      </div>
-      -->
 
     </div>
 
@@ -106,7 +90,7 @@
       <h2 class="ui-bar ui-bar-a">Getting started</h2>
   
       <ul>
-        <li>First, set up a profile. Enter your name, bug to track, and</li>
+        <li>First, set up a profile. Enter your name, a bg to track, and any other relevant information</li>
         <li>Records can be added through the Form page, and veiwed under Trends or Records</li>
         <li>Don't forget to check out the Suggestions page! It's full of useful information based on your past records.
         </li>
@@ -133,7 +117,7 @@
       <p><b>TO DO:</b></p>
       <ul>
         <li>Javascript functionality</li>
-        <li>Returning login page</li>
+        <li>Returning login </li>
         <li>Track more than one bug???</li>
         <li>Maybe some color other than grey</li>
         <li>Microtransactions/cash shop</li>
@@ -455,15 +439,9 @@
         <div data-role="fieldcontain">
           <label for="txt-bug1">Bug Name: </label>
           <input type="text" name="txt-bug1" data-mini="false" id="txt-bug1" value="">
-        </div>
-
-        <div data-role="fieldcontain">
+          <br>
           <label for="txt-bug1-type">Species: </label>
           <input type="text" name="txt-bug1-type" data-mini="false" id="txt-bug1-type" value="">
-        </div>
-        
-        <div data-role="fieldcontain">
-          <input type="button" value="Add bug!" data-icon="plus" id="btn-new-bug">
         </div>
 
         <!--Password section-->
@@ -779,7 +757,12 @@
 
   </div>
 
-  <script src="script.js"></script>
+  <!-- Javascript -->
+  <script src="scripts/login.js"></script>
+  <script src="scripts/page-loader.js"></script>
+  <script src="scripts/records.js"></script>
+  <script src="scripts/user-form.js"></script>
+
 </body>
 
 </html>

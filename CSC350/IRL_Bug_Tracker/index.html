@@ -1,8 +1,8 @@
 <!--
-  Assignment: Week 5 Lab
+  Assignment: Week 6 Lab
   Author: Todd Mills
-  Date: 4/9/22
-  Purpose: To track bugs!
+  Date: 4/23/22
+  Purpose: This mobile-oriented site is designed to be a bit of a play on words, a tongue-in-cheek reference to IT bug trackers. You can create a profile that is saved to local storage to track the care of IRL bugs.
 -->
 
 <!DOCTYPE html>
@@ -17,9 +17,10 @@
   <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
   <link rel="stylesheet" href="css/style.css">
 
-  <!-- JavaScript -->
+  <!-- JQuery -->
   <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
   <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
 </head>
 
 <body>
@@ -28,47 +29,38 @@
   <div data-role="page" id="login-page">
     <div data-role="header" id="header">
       <h1>Login</h1>
+      <a href="#about-page" data-role="button" class="ui-btn-right" data-icon="info" data-iconpos="left">Info</a>
     </div>
 
-    <div data-role="main" class="ui-content">
+    <div data-role="main" class="ui-content" id="login-page-content">
 
-      <!-- Login page displayed for new users-->
-      <div id="new-login">
-        <p>Set a pin number:</p>
-        <input type="password" id="pin-entry" placeholder="4-8 digits">
+      <div class="fieldcontain">
+        <input type="text" id="passcode" placeholder="PIN, 4-8 digits">
 
-        <div id="numpad">
-          <div data-role="controlgroup" data-type="horizontal">
-            <a data-role="button" onclick="addValueToPassword(7)">7</a>
-            <a data-role="button" onclick="addValueToPassword(8)">8</a>
-            <a data-role="button" onclick="addValueToPassword(9)">9</a>
-          </div>
-
-          <div data-role="controlgroup" data-type="horizontal">
-            <a data-role="button" onclick="addValueToPassword(4)">4</a>
-            <a data-role="button" onclick="addValueToPassword(5)">5</a>
-            <a data-role="button" onclick="addValueToPassword(6)">6</a>
-          </div>
-
-          <div data-role="controlgroup" data-type="horizontal">
-            <a data-role="button" onclick="addValueToPassword(1)">1</a>
-            <a data-role="button" onclick="addValueToPassword(2)">2</a>
-            <a data-role="button" onclick="addValueToPassword(3)">3</a>
-          </div>
-
-          <div data-role="controlgroup" data-type="horizontal">
-            <a data-role="button" onclick="addValueToPassword(0)">0</a>
-            <a data-role="button" onclick="addValueToPassword('bksp')" data-icon="delete">Back</a>
-          </div>
+        <div data-role="controlgroup" data-type="horizontal">
+          <a data-role="button" class="numpad">7</a>
+          <a data-role="button" class="numpad">8</a>
+          <a data-role="button" class="numpad">9</a>
         </div>
 
-        <div data-role="controlgroup">
-          <input type=button id="btn-enter" data-icon="arrow-r" value="Enter" data-iconpos="right">
-          <a href="#about-page-no-menu" data-role="button" data-icon="info" data-iconpos="right">About</a>
-
-          <!-- temporary button, will be removed w/ javascript-->
-          <a href="#disclaimer-page" data-role="button" data-icon="arrow-r" data-iconpos="right">Disclaimer</a>
+        <div data-role="controlgroup" data-type="horizontal">
+          <a data-role="button" class="numpad">4</a>
+          <a data-role="button" class="numpad">5</a>
+          <a data-role="button" class="numpad">6</a>
         </div>
+
+        <div data-role="controlgroup" data-type="horizontal">
+          <a data-role="button" class="numpad">1</a>
+          <a data-role="button" class="numpad">2</a>
+          <a data-role="button" class="numpad">3</a>
+        </div>
+
+        <div data-role="controlgroup" data-type="horizontal">
+          <a data-role="button" class="numpad">0</a>
+          <a data-role="button" class="numpad" data-icon="delete">Del</a>
+        </div>
+
+        <a data-role=button id="btn-enter" data-icon="arrow-r" data-iconpos="right">Enter</a>
 
       </div>
 
@@ -76,90 +68,11 @@
 
   </div>
 
-  <!-- About/info page, sans menu button for checking from the login screen, might remove w/ javascript -->
-  <div data-role="page" id="about-page-no-menu">
-
-    <div data-role="header">
-      <a href="#login-page" data-role="button" data-icon="arrow-l" data-iconpos="left">Return</a>
-      <h1>About IRL Bug Tracker</h1>
-    </div>
-
-    <div data-role="main" class="ui-content">
-
-      <!--Getting started-->
-      <h2 class="ui-bar ui-bar-a">Getting started</h2>
-  
-      <ul>
-        <li>First, set up a profile. Enter your name, a bg to track, and any other relevant information</li>
-        <li>Records can be added through the Form page, and veiwed under Trends or Records</li>
-        <li>Don't forget to check out the Suggestions page! It's full of useful information based on your past records.
-        </li>
-      </ul>
-  
-
-      <!--FAQs-->
-      <h2 class="ui-bar ui-bar-a ui-bar-icon">FAQ</h2>
-      <dl>
-        <dt>I forgot my password &#x1F627;</dt>
-        <dd>Thats okay! Just reset it from the Profile page, or use the Forgot PIN feature on the (coming soon) Login
-          page!</dd>
-        <dt>You're not funny &#x1F620;</dt>
-        <dd>&#x1F622;</dd>
-        <dt>I want to track more than one bug!</dt>
-        <dd>sucks, i guess</dd>
-        <dt>This is a dumb app for dumb people with a dumb topic</dt>
-        <dd>&#x1F614;</dd>
-      </dl>
-    
-
-      <!--Future planning-->
-      <h2 class="ui-bar ui-bar-a">App Development Roadmap</h2>
-      <p><b>TO DO:</b></p>
-      <ul>
-        <li>Javascript functionality</li>
-        <li>Returning login </li>
-        <li>Track more than one bug???</li>
-        <li>Maybe some color other than grey</li>
-        <li>Microtransactions/cash shop</li>
-        <li>Find some actual jokes</li>
-      </ul>
-
-      <!--About us-->
-      <h2 class="ui-bar ui-bar-a">Thanks for choosing our app!</h2>
-      <p>
-        Welcome to [store name], your number one source for all things [product, ie: shoes, bags, dog treats]. We're
-        dedicated to giving you the very best of [product], with a focus on [three characteristics, ie: dependability,
-        customer service and uniqueness.]
-      </p>
-      <p>
-        Founded in [year] by [founder's name], [store name] has come a long way from its beginnings in a [starting
-        location, ie: home office, toolshed, Houston, TX.]. When [store founder] first started out, his/her passion for
-        [passion of founder, ie: helping other parents be more eco-friendly, providing the best equipment for his fellow
-        musicians] drove him to [action, ie: do intense research, quit her day job], and gave him the impetus to turn
-        hard work and inspiration into to a booming online store. We now serve customers all over [place, ie: the US,
-        the world, the Austin area], and are thrilled to be a part of the [adjective, ie: quirky, eco-friendly, fair
-        trade] wing of the [industry type, ie: fashion, baked goods, watches] industry.
-      </p>
-      <img src="img/company.jpg" alt="employees around table" width="100">
-      <p>
-        We hope you enjoy our products as much as we enjoy offering them to you. If you have any questions or comments,
-        please don't hesitate to contact us.
-      </p>
-      <p>
-        Sincerely,
-        Name, [title, ie: CEO, Founder, etc.]
-      </p>
-
-    </div>
-
-
-  </div>
-
   <!-- About Page -->
   <div data-role="page" id="about-page">
 
     <div data-role="header">
-      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <button onclick="history.back()" data-icon="arrow-l" data-iconpos="left">Back</button>
       <h1>About IRL Bug Tracker</h1>
     </div>
 
@@ -174,7 +87,7 @@
         <li>Don't forget to check out the Suggestions page! It's full of useful information based on your past records.
         </li>
       </ul>
-  
+
       <!--FAQs-->
       <h2 class="ui-bar ui-bar-a ui-bar-icon">FAQ</h2>
       <dl>
@@ -229,7 +142,6 @@
 
     </div>
 
-
   </div>
 
   <!-- Disclaimer Page -->
@@ -237,6 +149,7 @@
 
     <div data-role="header">
       <h1>Disclaimer</h1>
+      <button onclick="history.back()" data-icon="arrow-l" data-iconpos="left">Back</button>
     </div>
 
     <div data-role="main" class="ui-content">
@@ -390,14 +303,35 @@
         doubts about the origin or content of this document please contact our Support Desk.
       </p>
 
-      <a href="#menu-page" id="noticeYes" data-role="button" data-icon="arrow-r" data-iconpos="right"
-        data-mini="false">Agree and continue</a>
+      <a href="#user-page" id="noticeYes" data-role="button" data-icon="arrow-r" data-iconpos="right">Agree and continue</a>
 
     </div>
 
   </div>
 
-  <!-- TODO: User Information/Profile Page -->
+  <!--  Menu Page -->
+  <div data-role="page" id="menu-page">
+    <div data-role="header">
+      <a href="#about-page" class="ui-btn-right" data-icon="info">Info</a>
+      <a href="#disclaimer-page" class="ui-btn-left" data-icon="alert">Disclaimer</a>
+      <h1>Menu</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+      <a href="#form-page" data-role="button" data-icon="plus">Add Record</a>
+      <a href="#records-page" data-role="button" data-icon="bullets">Records</a>
+      <br>
+      <a href="#graph-page" data-role="button" data-icon="action">Trends</a>
+      <a href="#suggestions-page" data-role="button" data-icon="edit">Suggestions</a>
+      <a href="#care-page" data-role="button" data-icon="heart">Care Sheets</a>
+      <br>
+      <a href="#user-page" data-role="button" data-icon="home">Profile</a>
+      <a href="#login-page" data-role="button" data-icon="arrow-l">Logout</a>
+    </div>
+
+  </div>
+
+  <!-- User Information/Profile Page -->
   <div data-role="page" id="user-page">
 
     <div data-role="header">
@@ -412,72 +346,34 @@
         <!--User info section-->
         <h2 class="ui-bar ui-bar-a">User info:</h2>
         <div data-role="fieldcontain">
-          <label for="txt-fname">First Name: </label>
-          <input type="text" placeholder="First Name" name="txt-fname" data-mini="false" id="txt-fname" value=""
-            required>
-        </div>
+          <input type="text" placeholder="First Name" id="txt-fname" maxlength="20" value="" required>
+          <input type="text" placeholder="Last Name" id="txt-lname" maxlength="20" value="" required>
 
-        <div data-role="fieldcontain">
-          <label for="txt-lname">Last Name: </label>
-          <input type="text" placeholder="Last Name" name="txt-lname" data-mini="false" id="txt-lname" value=""
-            required>
-        </div>
+          <!--Bug section-->
+          <h2 class="ui-bar ui-bar-a">Bug Info:</h2>
+          <input type="text" placeholder="Bug Name" id="txt-bug-name" maxlength="20" value="" required>
+          <input type="text" placeholder="Species" id="txt-bug-species" maxlength="20" value="" required>
+          <p>Weekly Feeding/Food Changes: </p>
+          <input type="range" id="range-food" max="7" min="1" id="range-food" value="1">
+          <p>Preferred Min. Temp: (&#xb0;F)</p>
+          <input type="range" id="range-temp-min" min="0" max="100" value="50">
+          <p>Preferred Max Temp: (&#xb0;F)</p>
+          <input type="range" id="range-temp-max" min="0" max="100" value="50">
+          <p>Preferred Min Humidity (%):</p>
+          <input type="range" id="range-humidity-min" min="0" max="100" value="50">
+          <p>Preferred Max Humidity (%):</p>
+          <input type="range" id="range-humidity-max" min="0" max="100" value="50">
 
-        <div data-role="fieldcontain">
-          <label for="txt-country">Country: </label>
-          <input type="text" name="txt-country" data-mini="false" id="txt-country" value="">
-        </div>
-
-        <div data-role="fieldcontain">
-          <label for="txt-ssn">SSN: </label>
-          <input type="text" placeholder="XXX-XX-XXXX" name="txt-ssn" data-mini="false" id="txt-ssn" value="">
-        </div>
-
-        <!--Bug section-->
-        <h2 class="ui-bar ui-bar-a">Bugs:</h2>
-        <h3 class="ui-bar ui-bar-a">Bug 1:</h3>
-        <div data-role="fieldcontain">
-          <label for="txt-bug1">Bug Name: </label>
-          <input type="text" name="txt-bug1" data-mini="false" id="txt-bug1" value="">
+          <!--Password section-->
+          <h2 class="ui-bar ui-bar-a">Other:</h2>
+          <input type="password" placeholder="Change PIN, 4-8 digits" name="txt-change-pin" id="txt-change-pin"
+            maxlength="8">
           <br>
-          <label for="txt-bug1-type">Species: </label>
-          <input type="text" name="txt-bug1-type" data-mini="false" id="txt-bug1-type" value="">
-        </div>
-
-        <!--Password section-->
-        <h2 class="ui-bar ui-bar-a">Other:</h2>
-        <div data-role="fieldcontain">
-          <label for="change-pin">Edit PIN: </label>
-          <input type="password" placeholder="4-8 digits" name="change-pin" data-mini="false" id="change-pin" value="">
-        </div>
-
-        <div data-role="fieldcontain">
-          <input type="button" value="Apply changes" data-icon="check" id="btn-apply-changes">
+          <input type="submit" id="btn-apply-changes" value="Apply Changes">
         </div>
 
       </form>
 
-    </div>
-
-  </div>
-
-  <!--  Menu Page -->
-  <div data-role="page" id="menu-page">
-    <div data-role="header">
-      <a href="#about-page" class="ui-btn-right" data-icon="info">Info</a>
-      <h1>Menu</h1>
-    </div>
-
-    <div data-role="main" class="ui-content">
-      <a href="#form-page" data-role="button" data-icon="plus">Add Record</a>
-      <a href="#records-page" data-role="button" data-icon="bullets">Records</a>
-      <hr>
-      <a href="#graph-page" data-role="button" data-icon="action">Trends</a>
-      <a href="#suggestions-page" data-role="button" data-icon="edit">Suggestions</a>
-      <a href="#care-page" data-role="button" data-icon="heart">Care Sheets</a>
-      <hr>
-      <a href="#user-page" data-role="button" data-icon="home">Profile</a>
-      <a href="#login-page" data-role="button" data-icon="arrow-l">Logout</a>
     </div>
 
   </div>
@@ -503,14 +399,14 @@
 
 
       <div data-role="fieldcontain">
-        <a href="#form-page" data-role="button" data-icon="plus">Add New Entry</a>
+        <a href="#form-page" data-role="button" data-icon="plus" id="btn-add-record">Add New Entry</a>
         <a href="#" data-role="button" id="btn-clear-record" data-icon="delete">Clear History</a>
       </div>
     </div>
 
   </div>
 
-  <!-- TODO: Record Form Page -->
+  <!-- Record Form Page -->
   <div data-role="page" id="form-page">
     <div data-role="header">
       <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
@@ -519,43 +415,26 @@
     </div>
 
     <div data-role="main" class="ui-content">
-      <form id="form-new-record">
+      <form id="form-new-record" action="">
         <div data-role="fieldcontain">
-          <div data-role="fieldcontain">
-            <label for="date-new-record">Date: </label>
-            <input type="date" id="date-new-record" data-mini="false" name="date-new-record" value="" required>
 
-            <label for="time-new-record">Time: </label>
-            <input type="time" id="time-new-record" data-mini="false" name="time-new-record" value="" required>
+          <div data-role="fieldcontain">
+            <p>Date: </p>
+            <input type="date" id="date-new-record" name="date-new-record" required>
           </div>
-          <hr>
 
           <div data-role="fieldcontain">
-            <label for="select-bug">Bug: </label>
-            <select name="select-bug" id="select-bug" data-mini="false">
-              <option>Select Bug</option>
-              <option value="bug-1">Bug 1</option>
-            </select>
-
-            <label for="range-food">Food: </label>
-            <input type="range" id="range-food" min="0" max="5" data-mini="false" name="range-food">
-
-            <label for="range-water">Water: </label>
-            <input type="range" id="range-water" min="0" max="5" data-mini="false" name="range-water">
-
-            <label for="range-mood">Mood: </label>
-            <input type="range" id="range-mood" min="0" max="5" data-mini="false" name="range-mood">
+            <label for="check-food">Food offered/changed?</label>
+            <input type="checkbox" id="check-food">
+            <p>Temperature: </p>
+            <input type="range" id="range-record-temp" min="0" max="100" value="50">
+            <p>(%) Humidity:</p>
+            <input type="range" id="range-record-humidity" min="0" max="100" value="50">
           </div>
-          <hr>
 
           <div data-role="fieldcontain">
-            <input type="button" id="btn-record-new-bug" value="Add bug" data-mini="false" data-icon="plus">
-          </div>
-          <hr>
-
-          <div data-role="fieldcontain">
-            <input type="reset" value="Clear" data-icon="delete" id="btn-record-clear" data-mini="false">
-            <input type="submit" value="Submit" data-icon="check" id="btn-record-submit" data-mini="false">
+            <input type="reset" value="Reset" data-icon="delete" id="btn-reset-form">
+            <input type="submit" value="" data-icon="check" id="btn-record-submit">
           </div>
 
         </div>
@@ -587,21 +466,21 @@
 
       <div class="panel panel-success">
         <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Water</h3>
+          <h3 class="panel-title ui-bar ui-bar-a">Temperature</h3>
         </div>
 
         <div class="panel-body">
-          <canvas id="canvas-water"></canvas>
+          <canvas id="canvas-temp"></canvas>
         </div>
       </div>
 
       <div class="panel panel-success">
         <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Mood</h3>
+          <h3 class="panel-title ui-bar ui-bar-a">Humidity</h3>
         </div>
 
         <div class="panel-body">
-          <canvas id="canvas-mood"></canvas>
+          <canvas id="canvas-humidity"></canvas>
         </div>
       </div>
 
@@ -620,7 +499,7 @@
     <div data-role="main" class="ui-content">
       <div class="panel panel-success">
         <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Reccomendations</h3>
+          <h3 class="panel-title ui-bar ui-bar-a">Recomendations</h3>
         </div>
 
         <div class="panel-body">
@@ -641,10 +520,10 @@
     </div>
 
     <div data-role="main" class="ui-content">
-      <p>Included below are simple care sheets for some of the most common pet bugs</p>
+      <p>Included below are simple care sheets for some of the most common pet bugs.</p>
 
       <h2 class="ui-bar ui-bar-a">Ant</h2>
-      <img class="bugs" src="img/ant.jpg" alt="ant" height="400">
+      <img class="bugs" src="img/ant.jpg" alt="ant">
       <p>
         Ants are eusocial insects of the family Formicidae and, along with the related wasps and bees, belong to the
         order Hymenoptera. Ants appear in the fossil record across the globe in considerable diversity during the latest
@@ -656,11 +535,12 @@
       <h3>Care</h3>
       <p>Food: idk like dirt and leaves or something</p>
       <P>Temp: they live outside so who cares</P>
+      <p>Humidity: doesnt matter</p>
       <p>Other: They should stay outside</p>
 
 
       <h2 class="ui-bar ui-bar-a">Bug</h2>
-      <img class="bugs" src="img/bug.webp" alt="lost frog" height="400">
+      <img class="bugs" src="img/bug.webp" alt="lost frog">
       <p>
         Ceratophrys is a genus of frogs in the family Ceratophryidae. They are also known as South American horned frogs
         as well as Pacman frogs due to their characteristic round shape and large mouth, reminiscent of the video game
@@ -669,10 +549,11 @@
       <h3>Care</h3>
       <p>Food: ant</p>
       <P>Temp: mud</P>
+      <p>Humidity: wet</p>
       <p>Other: slimy</p>
 
       <h2 class="ui-bar ui-bar-a">Lil' Ouchy</h2>
-      <img class="bugs" src="img/lilouchy.webp" alt="house centipede" height="400">
+      <img class="bugs" src="img/lilouchy.webp" alt="house centipede">
       <p>
         Scutigera coleoptrata, also known as the house centipede, is a species of centipede that is typically
         yellowish-grey and has up to 15 pairs of long legs. Originating in the Mediterranean region, it has spread to
@@ -682,10 +563,11 @@
       <h3>Care</h3>
       <p>Food: PB&J</p>
       <P>Temp: 60 - 80 degrees F should be fine.</P>
+      <p>Humidity: 100%</p>
       <p>Other: Has self-esteem issues.</p>
 
       <h2 class="ui-bar ui-bar-a">Snuggles</h2>
-      <img class="bugs" src="img/snuggles.webp" alt="wolf spider" height="400">
+      <img class="bugs" src="img/snuggles.webp" alt="wolf spider">
       <p>
         Wolf spiders are members of the family Lycosidae (from Ancient Greek λύκος (lúkos) 'wolf'). They are robust and
         agile hunters with excellent eyesight. They live mostly in solitude, hunt alone, and do not spin webs. Some are
@@ -695,10 +577,11 @@
       <h3>Care</h3>
       <p>Food: They live only on UwUs and hugs</p>
       <P>Temp: Not too hot!</P>
+      <p>Humidity: Not too wet!</p>
       <p>Other: Needs an excellent support structure-based enviroment. Likes touch football.</p>
 
       <h2 class="ui-bar ui-bar-a">Sneezy</h2>
-      <img class="bugs" src="img/sneezy.jpg" alt="pholcidae" height="400">
+      <img class="bugs" src="img/sneezy.jpg" alt="pholcidae">
       <p>
         The Pholcidae are a family of araneomorph spiders. The family contains over 1,800 individual species of
         pholcids, including those commonly known as cellar spider, daddy long-legs spider, carpenter spider, daddy
@@ -711,10 +594,11 @@
       <h3>Care</h3>
       <p>Food: Never seen them eat anything.</p>
       <P>Temp: Whatever, they like it inside houses.</P>
+      <p>Humidity: yes?</p>
       <p>Other: Makes a mess. Forgets his Social Security number often.</p>
 
       <h2 class="ui-bar ui-bar-a">Evil Snuggles</h2>
-      <img class="bugs" src="img/evilsnuggles.jpg" alt="wolf spider but rotated and colorshifted" height="400">
+      <img class="bugs" src="img/evilsnuggles.jpg" alt="wolf spider but rotated and colorshifted">
       <p>
         passing prey in or near the mouth of a burrow.
         opportunistic hunters, pouncing upon prey as they find it or chasing it over short distances; others wait for
@@ -724,10 +608,11 @@
       <h3>Care</h3>
       <p>Food: Whatever you are eating. He wants it. Give it to him or he will cut you.</p>
       <P>Temp: 69 degrees</P>
+      <p>Humidity: 420%</p>
       <p>Other: Will take your credit card and buy lottery tickets</p>
 
       <h2 class="ui-bar ui-bar-a">Roach</h2>
-      <img class="bugs" src="img/roach.jpeg" alt="some dude in a roach costume" height="400">
+      <img class="bugs" src="img/roach.jpeg" alt="some dude in a roach costume">
       <p>
         Cockroaches (or roaches) are insects of the order Blattodea, which also includes termites. About 30
         cockroach species out of 4,600 are associated with human habitats. Some species are well-known as pests.
@@ -749,10 +634,11 @@
       <h3>Care</h3>
       <p>Food: Anything. Diapers, bones, and fresh fruit</p>
       <P>Temp: Anything from nuclear winter to nuclear explosion should be fine.</P>
+      <p>Humidity: Idk they wont die no matter what</p>
       <p>Other: Gross!!</p>
 
-      <!-- will be changed to a "back to top" button-->
-      <a href="#menu-page" data-role="button">Menu</a>
+
+      <button id="btn-care-scroll">Back to Top</button>
     </div>
 
   </div>

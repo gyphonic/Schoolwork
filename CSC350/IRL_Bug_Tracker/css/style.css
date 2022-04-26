@@ -1,11 +1,26 @@
 /*
   Name: Todd Mills
-  Date: 4/9/22
-  Assignment: Week 5 Lab
+  Assignment: Week 6 Lab
+  Date: 4/23/22
+  Purpose: Custom CSS handling beyond JQuery mobile for IRL Bug Tracker
 */
 
-#canvas-food, #canvas-water, #canvas-mood, #canvas-advice {
+.ui-content {
+  max-width: 400px;
+  margin: auto;
+}
+
+.bugs {
+max-width: 100%;
+}
+
+#login-page-content {
+  max-width: 130px;
+}
+
+#canvas-food, #canvas-temp, #canvas-humidity, #canvas-advice {
   border: 1px solid #000000;
-  height: 500px;
+  height: 300px;
   width:100%;
 }
+

@@ -1,7 +1,7 @@
 /*  
-    Assignment: Week 6 Lab
+    Assignment: Week 7 Lab
     Author: Todd Mills
-    Date: 4/23/22
+    Date: 5/1/22
     Purpose: Handling code related to user information, saving and loading
 */
 
@@ -54,6 +54,7 @@ function saveUserForm() {
 		} else {
 			//save to localStorage
 			try {
+				password = getPassword();
                 let user = {
                     firstName: $("#txt-fname").val(),
                     lastName: $("#txt-lname").val(),
@@ -64,7 +65,7 @@ function saveUserForm() {
                     bugMaxTemp: $("#range-temp-max").val(),
                     bugMinHum: $("#range-humidity-min").val(),
                     bugMaxHum: $("#range-humidity-max").val(),
-                    password: "2345",
+					password: password
                 };
 				localStorage.setItem("user", JSON.stringify(user));
 				alert("Saving changes...");
@@ -142,3 +143,8 @@ function showUserForm() {
 		console.log(e);
 	}
 }
+
+//delete profile button
+$("#btn-delete-profile").on("click", function() {
+	localStorage.clear();
+});

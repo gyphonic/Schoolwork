@@ -1,7 +1,7 @@
 /*  
-    Assignment: Week 6 Lab
+    Assignment: Week 7 Lab
     Author: Todd Mills
-    Date: 4/23/22
+    Date: 5/1/22
     Purpose: Handles code related to login functions
 */
 
@@ -16,6 +16,8 @@ $(".numpad").on("click", function () {
 $("#btn-enter").on("click", function () {
 	let password = getPassword();
 	if (document.getElementById("passcode").value == password) {
+		//clear password field
+		$("#passcode").val("");
 		//hasnt agreed to legal
 		if (localStorage.getItem("agreedToLegal") == null) {
 			$("#btn-enter").attr("href", "#disclaimer-page");
@@ -32,12 +34,13 @@ $("#btn-enter").on("click", function () {
 		//incorrect login
 	} else {
 		$("#passcode").val("");
-		alert("Incorrect PIN. New User? Enter '2345'");
+		$("#btn-enter").removeAttr("href");
+		alert("Incorrect PIN. New User? Enter '2345'  " + password);
 	}
 });
 
 //records the user agreeing to the disclaimer
-$("#noticeYes").click(() => {
+$("#noticeYes").on("click", function() {
 	try {
 		localStorage.setItem("agreedToLegal", "true");
 		$("#noticeYes").hide();
@@ -68,7 +71,10 @@ function getPassword() {
 				"Your browser does not support HTML5 localstorage. Please switch to a browser that does."
 			);
 		} else if (localStorage.getItem("user") != null) {
-			return JSON.parse(localstorage.getItem("user")).password;
+			//extremely finnicky, doesn't want to be one line
+			//pull user's password
+			let user = JSON.parse(localStorage.getItem("user"));
+			return user.password;
 		} else {
 			//default password
 			return "2345";

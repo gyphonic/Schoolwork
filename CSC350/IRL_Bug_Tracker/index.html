@@ -1,7 +1,7 @@
 <!--
-  Assignment: Week 6 Lab
+  Assignment: Week 7 Lab
   Author: Todd Mills
-  Date: 4/23/22
+  Date: 5/1/22
   Purpose: This mobile-oriented site is designed to be a bit of a play on words, a tongue-in-cheek reference to IT bug trackers. You can create a profile that is saved to local storage to track the care of IRL bugs.
 -->
 
@@ -21,6 +21,17 @@
   <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
   <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
 
+  <!-- RGraph  -->
+  <script src="scripts/RGraph/RGraph.common.core.js"></script>
+  <script src="scripts/RGraph/RGraph.common.effects.js"></script>
+  <script src="scripts/RGraph/RGraph.hprogress.js"></script>
+  <script src="scripts/RGraph/RGraph.line.js"></script>
+  <script src="scripts/RGraph/RGraph.common.dynamic.js"></script>
+  <script src="scripts/RGraph/RGraph.drawing.text.js"></script>
+  <script src="scripts/RGraph/RGraph.svg.activity.js"></script>
+  <script src="scripts/RGraph/RGraph.svg.common.core.js"></script>
+  <script src="scripts/RGraph/RGraph.activity.js"></script>
+
 </head>
 
 <body>
@@ -35,7 +46,8 @@
     <div data-role="main" class="ui-content" id="login-page-content">
 
       <div class="fieldcontain">
-        <input type="text" id="passcode" placeholder="PIN, 4-8 digits">
+        <h2>PIN:</h2>
+        <input type="password" id="passcode">
 
         <div data-role="controlgroup" data-type="horizontal">
           <a data-role="button" class="numpad">7</a>
@@ -303,7 +315,10 @@
         doubts about the origin or content of this document please contact our Support Desk.
       </p>
 
-      <a href="#user-page" id="noticeYes" data-role="button" data-icon="arrow-r" data-iconpos="right">Agree and continue</a>
+      <button id="btn-disclaimer-scroll">Back to Top</button>
+      <a href="#user-page" id="noticeYes" data-role="button" data-icon="arrow-r" data-iconpos="right">Agree and
+        continue</a>
+
 
     </div>
 
@@ -318,7 +333,6 @@
     </div>
 
     <div data-role="main" class="ui-content">
-      <a href="#form-page" data-role="button" data-icon="plus">Add Record</a>
       <a href="#records-page" data-role="button" data-icon="bullets">Records</a>
       <br>
       <a href="#graph-page" data-role="button" data-icon="action">Trends</a>
@@ -354,7 +368,7 @@
           <input type="text" placeholder="Bug Name" id="txt-bug-name" maxlength="20" value="" required>
           <input type="text" placeholder="Species" id="txt-bug-species" maxlength="20" value="" required>
           <p>Weekly Feeding/Food Changes: </p>
-          <input type="range" id="range-food" max="7" min="1" id="range-food" value="1">
+          <input type="range" max="7" min="1" id="range-food" value="1">
           <p>Preferred Min. Temp: (&#xb0;F)</p>
           <input type="range" id="range-temp-min" min="0" max="100" value="50">
           <p>Preferred Max Temp: (&#xb0;F)</p>
@@ -370,6 +384,8 @@
             maxlength="8">
           <br>
           <input type="submit" id="btn-apply-changes" value="Apply Changes">
+          <br>
+          <a data-role="button" data-icon="alert" id="btn-delete-profile" href="#login-page">Delete Profile</a>
         </div>
 
       </form>
@@ -400,7 +416,8 @@
 
       <div data-role="fieldcontain">
         <a href="#form-page" data-role="button" data-icon="plus" id="btn-add-record">Add New Entry</a>
-        <a href="#" data-role="button" id="btn-clear-record" data-icon="delete">Clear History</a>
+        <br>
+        <a href="#" data-role="button" id="btn-clear-record" data-icon="alert">Clear History</a>
       </div>
     </div>
 
@@ -409,13 +426,13 @@
   <!-- Record Form Page -->
   <div data-role="page" id="form-page">
     <div data-role="header">
-      <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
+      <button onclick="history.back()" data-icon="arrow-l" data-iconpos="left">Back</button>
       <a href="#about-page" data-role="button" data-icon="info" data-iconpos="right">Info</a>
       <h1>Add Record</h1>
     </div>
 
     <div data-role="main" class="ui-content">
-      <form id="form-new-record" action="">
+      <form id="form-new-record">
         <div data-role="fieldcontain">
 
           <div data-role="fieldcontain">
@@ -425,7 +442,7 @@
 
           <div data-role="fieldcontain">
             <label for="check-food">Food offered/changed?</label>
-            <input type="checkbox" id="check-food">
+            <input type="checkbox" id="check-food" value="Yes">
             <p>Temperature: </p>
             <input type="range" id="range-record-temp" min="0" max="100" value="50">
             <p>(%) Humidity:</p>
@@ -433,8 +450,9 @@
           </div>
 
           <div data-role="fieldcontain">
+
             <input type="reset" value="Reset" data-icon="delete" id="btn-reset-form">
-            <input type="submit" value="" data-icon="check" id="btn-record-submit">
+            <input type="submit" value="Add" data-icon="check" id="btn-record-submit">
           </div>
 
         </div>
@@ -445,7 +463,7 @@
 
   </div>
 
-  <!-- Graph Page, currently nonfunctional -->
+  <!-- Graph Page -->
   <div data-role="page" id="graph-page">
     <div data-role="header">
       <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
@@ -454,41 +472,23 @@
     </div>
 
     <div data-role="main" class="ui-content">
-      <div class="panel panel-success">
-        <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Food</h3>
-        </div>
-
-        <div class="panel-body">
-          <canvas id="canvas-food"></canvas>
-        </div>
+      <div class="panel-body">
+        <canvas id="canvas-food"></canvas>
       </div>
-
-      <div class="panel panel-success">
-        <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Temperature</h3>
-        </div>
-
-        <div class="panel-body">
-          <canvas id="canvas-temp"></canvas>
-        </div>
+      <br>
+      <div class="panel-body">
+        <canvas id="canvas-temp"></canvas>
       </div>
-
-      <div class="panel panel-success">
-        <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Humidity</h3>
-        </div>
-
-        <div class="panel-body">
-          <canvas id="canvas-humidity"></canvas>
-        </div>
+      <br>
+      <div class="panel-body">
+        <canvas id="canvas-humidity"></canvas>
       </div>
 
     </div>
 
   </div>
 
-  <!-- Suggestions page, currently nonfunctional-->
+  <!-- Suggestions page -->
   <div data-role="page" id="suggestions-page">
     <div data-role="header">
       <a href="#menu-page" data-role="button" data-icon="bars" data-iconpos="left">Menu</a>
@@ -499,7 +499,7 @@
     <div data-role="main" class="ui-content">
       <div class="panel panel-success">
         <div class="panel-heading">
-          <h3 class="panel-title ui-bar ui-bar-a">Recomendations</h3>
+          <h3 class="panel-title ui-bar ui-bar-a">Recommendations:</h3>
         </div>
 
         <div class="panel-body">
@@ -648,6 +648,8 @@
   <script src="scripts/page-loader.js"></script>
   <script src="scripts/records.js"></script>
   <script src="scripts/user-form.js"></script>
+  <script src="scripts/graph.js"></script>
+  <script src="scripts/advice.js"></script>
 
 </body>
 

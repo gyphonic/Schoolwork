@@ -1,4097 +1,560 @@
-    /**
-     * o------------------------------------------------------------------------------o
-     * | This file is part of the RGraph package - you can learn more at:             |
-     * |                                                                              |
-     * |                          http://www.rgraph.net                               |
-     * |                                                                              |
-     * | This package is licensed under the RGraph license. For all kinds of business |
-     * | purposes there is a small one-time licensing fee to pay and for non          |
-     * | commercial  purposes it is free to use. You can read the full license here:  |
-     * |                                                                              |
-     * |                      http://www.rgraph.net/license                           |
-     * o------------------------------------------------------------------------------o
-     */
 
-    /**
-     * Initialise the various objects
-     */
-    if (typeof (RGraph) == 'undefined') RGraph = {
-      isRGraph: true,
-      type: 'common'
-    };
-
-    RGraph.Registry = {};
-    RGraph.Registry.store = [];
-    RGraph.Registry.store['chart.event.handlers'] = [];
-    RGraph.Registry.store[
-      '__rgraph_event_listeners__'] = []; // Used in the new system for tooltips
-    RGraph.background = {};
-    RGraph.objects = [];
-    RGraph.Resizing = {};
-    RGraph.events = [];
-    RGraph.cursor = [];
-
-    RGraph.ObjectRegistry = {};
-    RGraph.ObjectRegistry.objects = {};
-    RGraph.ObjectRegistry.objects.byUID = [];
-    RGraph.ObjectRegistry.objects.byCanvasID = [];
-
-    /**
-     * Some "constants"
-     */
-    PI = Math.PI;
-    HALFPI = PI / 2;
-    TWOPI = PI * 2;
-    ISFF = navigator.userAgent.indexOf('Firefox') !=
-      -1;
-    ISOPERA = navigator.userAgent.indexOf('Opera') !=
-      -1;
-    ISCHROME = navigator.userAgent.indexOf(
-      'Chrome') != -1;
-    ISSAFARI = navigator.userAgent.indexOf(
-      'Safari') != -1;
-    ISWEBKIT = navigator.userAgent.indexOf(
-      'WebKit') != -1;
-    //ISIE     is defined below
-    //ISIE6    is defined below
-    //ISIE7    is defined below
-    //ISIE8    is defined below
-    //ISIE9    is defined below
-    //ISIE9    is defined below
-    //ISIE9UP  is defined below
-    //ISIE10   is defined below
-    //ISIE10UP is defined below
-    //ISOLD    is defined below
-
-    /**
-     * Returns five values which are used as a nice scale
-     *
-     * @param  max int    The maximum value of the graph
-     * @param  obj object The graph object
-     * @return     array   An appropriate scale
-     */
-    RGraph.getScale = function (max, obj) {
-      /**
-       * Special case for 0
-       */
-      if (max == 0) {
-        return ['0.2', '0.4', '0.6', '0.8',
-          '1.0'
-        ];
-      }
-
-      var original_max = max;
-
-      /**
-       * Manually do decimals
-       */
-      if (max <= 1) {
-        if (max > 0.5) {
-          return [0.2, 0.4, 0.6, 0.8, Number(1)
-            .toFixed(1)
-          ];
-
-        } else if (max >= 0.1) {
-          return obj.Get('chart.scale.round') ? [
-            0.2, 0.4, 0.6, 0.8, 1
-          ] : [0.1, 0.2, 0.3, 0.4, 0.5];
-
-        } else {
-
-          var tmp = max;
-          var exp = 0;
-
-          while (tmp < 1.01) {
-            exp += 1;
-            tmp *= 10;
-          }
-
-          var ret = ['2e-' + exp, '4e-' + exp,
-            '6e-' + exp, '8e-' + exp, '10e-' +
-            exp
-          ];
-
-          if (max <= ('5e-' + exp)) {
-            ret = ['1e-' + exp, '2e-' + exp,
-              '3e-' + exp, '4e-' + exp, '5e-' +
-              exp
-            ];
-          }
-
-          return ret;
-        }
-      }
-
-      // Take off any decimals
-      if (String(max).indexOf('.') > 0) {
-        max = String(max).replace(/\.\d+$/, '');
-      }
-
-      var interval = Math.pow(10, Number(String(
-        Number(max)).length - 1));
-      var topValue = interval;
-
-      while (topValue < max) {
-        topValue += (interval / 2);
-      }
-
-      // Handles cases where the max is (for example) 50.5
-      if (Number(original_max) > Number(
-          topValue)) {
-        topValue += (interval / 2);
-      }
-
-      // Custom if the max is greater than 5 and less than 10
-      if (max < 10) {
-        topValue = (Number(original_max) <= 5 ?
-          5 : 10);
-      }
-
-      /**
-       * Added 02/11/2010 to create "nicer" scales
-       */
-      if (obj && typeof (obj.Get(
-          'chart.scale.round')) == 'boolean' &&
-        obj.Get('chart.scale.round')) {
-        topValue = 10 * interval;
-      }
-
-      return [topValue * 0.2, topValue * 0.4,
-        topValue * 0.6, topValue * 0.8,
-        topValue
-      ];
-    }
-
-    /**
-     * Returns an appropriate scale. The return value is actualy anm object consiosting of:
-     *  scale.max
-     *  scale.min
-     *  scale.scale
-     *
-     * @param  obj object  The graph object
-     * @param  prop object An object consisting of configuration properties
-     * @return     object  An object containg scale information
-     */
-    RGraph.getScale2 = function (obj, opt) {
-      var ca = obj.canvas;
-      var co = obj.context;
-      var prop = obj.properties;
-
-      var numlabels = typeof (opt[
-        'ylabels.count']) == 'number' ? opt[
-        'ylabels.count'] : 5;
-      var units_pre = typeof (opt['units.pre']) ==
-        'string' ? opt['units.pre'] : '';
-      var units_post = typeof (opt['units.post']) ==
-        'string' ? opt['units.post'] : '';
-      var max = Number(opt['max']);
-      var min = typeof (opt['min']) == 'number' ?
-        opt['min'] : 0;
-      var strict = opt['strict'];
-      var decimals = Number(opt[
-        'scale.decimals']); // Sometimes the default is null
-      var point = opt['scale.point']; // Default is a string in all chart libraries so no need to cast it
-      var thousand = opt['scale.thousand']; // Default is a string in all chart libraries so no need to cast it
-      var original_max = max;
-      var round = opt['scale.round'];
-      var scale = {
-        'max': 1,
-        'labels': []
-      };
-
-      /**
-       * Special case for 0
-       *
-       * ** Must be first **
-       */
-      if (!max) {
-
-        var max = 1;
-
-        var scale = {
-          max: 1,
-          min: 0,
-          labels: []
-        };
-
-        for (var i = 0; i < numlabels; ++i) {
-          var label = ((((max - min) /
-            numlabels) + min) * (i + 1)).toFixed(
-            decimals);
-          scale.labels.push(units_pre + label +
-            units_post);
-        }
-
-        /**
-         * Manually do decimals
-         */
-      } else if (max <= 1 && !strict) {
-
-        if (max > 0.5) {
-
-          max = 1;
-          min = min;
-          scale.min = min;
-
-          for (var i = 0; i < numlabels; ++i) {
-            var label = ((((max - min) /
-              numlabels) * (i + 1)) + min).toFixed(
-              decimals);
-
-            scale.labels.push(units_pre + label +
-              units_post);
-          }
-
-        } else if (max >= 0.1) {
-
-          max = 0.5;
-          min = min;
-          scale = {
-            'max': 0.5,
-            'min': min,
-            'labels': []
-          }
-
-          for (var i = 0; i < numlabels; ++i) {
-            var label = ((((max - min) /
-              numlabels) + min) * (i + 1)).toFixed(
-              decimals);
-            scale.labels.push(units_pre + label +
-              units_post);
-          }
-
-        } else {
-          scale = {
-            'min': min,
-            'labels': []
-          }
-          var max_str = String(max);
-
-          if (max_str.indexOf('e') > 0) {
-            var numdecimals = Math.abs(max_str.substring(
-              max_str.indexOf('e') + 1));
-          } else {
-            var numdecimals = String(max).length -
-              2;
-          }
-
-          var max = 1 / Math.pow(10,
-            numdecimals - 1);
-
-          for (var i = 0; i < numlabels; ++i) {
-            var label = ((((max - min) /
-              numlabels) + min) * (i + 1));
-            label = label.toExponential();
-            label = label.split(/e/);
-            label[0] = Math.round(label[0]);
-            label = label.join('e');
-            scale.labels.push(label);
-          }
-
-          //This makes the top scale value of the format 10e-2 instead of 1e-1
-          tmp = scale.labels[scale.labels.length -
-            1].split(/e/);
-          tmp[0] += 0;
-          tmp[1] = Number(tmp[1]) - 1;
-          tmp = tmp[0] + 'e' + tmp[1];
-          scale.labels[scale.labels.length - 1] =
-            tmp;
-
-          // Add the units
-          for (var i = 0; i < scale.labels.length; ++
-            i) {
-            scale.labels[i] = units_pre + scale
-              .labels[i] + units_post;
-          }
-
-          scale.max = Number(max);
-        }
-
-      } else if (!strict) {
-
-        /**
-         * Now comes the scale handling for integer values
-         */
-
-        // This accomodates decimals by rounding the max up to the next integer
-        max = Math.ceil(max);
-
-        var interval = Math.pow(10, Number(
-          String(Number(max) - Number(min))
-          .length - 1));
-
-        var topValue = interval;
-
-        while (topValue < max) {
-          topValue += (interval / 2);
-        }
-
-        // Handles cases where the max is (for example) 50.5
-        if (Number(original_max) > Number(
-            topValue)) {
-          topValue += (interval / 2);
-        }
-
-        // Custom if the max is greater than 5 and less than 10
-        if (max <= 10) {
-          topValue = (Number(original_max) <= 5 ?
-            5 : 10);
-        }
-
-        // Added 02/11/2010 to create "nicer" scales
-        if (obj && typeof (round) == 'boolean' &&
-          round) {
-          topValue = 10 * interval;
-        }
-
-        scale.max = topValue;
-
-        // Now generate the scale. Temporarily set the objects chart.scale.decimal and chart.scale.point to those
-        //that we've been given as the number_format functuion looks at those instead of using argumrnts.
-        var tmp_point = prop[
-          'chart.scale.point'];
-        var tmp_thousand = prop[
-          'chart.scale.thousand'];
-
-        obj.Set('chart.scale.thousand',
-          thousand);
-        obj.Set('chart.scale.point', point);
-
-        for (var i = 0; i < numlabels; ++i) {
-          scale.labels.push(RGraph.number_format(
-            obj, ((((i + 1) / numlabels) *
-              (topValue - min)) + min).toFixed(
-              decimals), units_pre,
-            units_post));
-        }
-
-        obj.Set('chart.scale.thousand',
-          tmp_thousand);
-        obj.Set('chart.scale.point', tmp_point);
-
-      } else if (typeof (max) == 'number' &&
-        strict) {
-
-        /**
-         * ymax is set and also strict
-         */
-        for (var i = 0; i < numlabels; ++i) {
-          scale.labels.push(RGraph.number_format(
-            obj, ((((i + 1) / numlabels) *
-              (max - min)) + min).toFixed(
-              decimals), units_pre,
-            units_post));
-        }
-
-        // ???
-        scale.max = max;
-      }
-
-      scale.units_pre = units_pre;
-      scale.units_post = units_post;
-      scale.point = point;
-      scale.decimals = decimals;
-      scale.thousand = thousand;
-      scale.numlabels = numlabels;
-      scale.round = Boolean(round);
-      scale.min = min;
-
-      return scale;
-    }
-
-    /**
-     * Returns the maximum numeric value which is in an array
-     *
-     * @param  array arr The array (can also be a number, in which case it's returned as-is)
-     * @param  int       Whether to ignore signs (ie negative/positive)
-     * @return int       The maximum value in the array
-     */
-    RGraph.array_max = function (arr) {
-      var max = null;
-
-      if (typeof (arr) == 'number') {
-        return arr;
-      }
-
-      for (var i = 0; i < arr.length; ++i) {
-        if (typeof (arr[i]) == 'number') {
-
-          var val = arguments[1] ? Math.abs(arr[
-            i]) : arr[i];
-
-          if (typeof (max) == 'number') {
-            max = Math.max(max, val);
-          } else {
-            max = val;
-          }
-        }
-      }
-
-      return max;
-    }
-
-    /**
-     * Returns the maximum value which is in an array
-     *
-     * @param  array arr The array
-     * @param  int   len The length to pad the array to
-     * @param  mixed     The value to use to pad the array (optional)
-     */
-    RGraph.array_pad = function (arr, len) {
-      if (arr.length < len) {
-        var val = arguments[2] ? arguments[2] :
-          null;
-
-        for (var i = arr.length; i < len; ++i) {
-          arr[i] = val;
-        }
-      }
-
-      return arr;
-    }
-
-    /**
-     * An array sum function
-     *
-     * @param  array arr The  array to calculate the total of
-     * @return int       The summed total of the arrays elements
-     */
-    RGraph.array_sum = function (arr) {
-      // Allow integers
-      if (typeof (arr) == 'number') {
-        return arr;
-      }
-
-      var i, sum;
-      var len = arr.length;
-
-      for (i = 0, sum = 0; i < len; sum += arr[
-          i++]);
-      return sum;
-    }
-
-    /**
-     * Takes any number of arguments and adds them to one big linear array
-     * which is then returned
-     *
-     * @param ... mixed The data to linearise. You can strings, booleans, numbers or arrays
-     */
-    RGraph.array_linearize = function () {
-      var arr = [];
-      var args = arguments;
-
-      for (var i = 0; i < args.length; ++i) {
-
-        if (typeof (args[i]) == 'object' &&
-          args[i]) {
-          for (var j = 0; j < arguments[i].length; ++
-            j) {
-            var sub = RGraph.array_linearize(
-              args[i][j]);
-
-            for (var k = 0; k < sub.length; ++k) {
-              arr.push(sub[k]);
-            }
-          }
-        } else {
-          arr.push(args[i]);
-        }
-      }
-
-      return arr;
-    }
-
-    /**
-     * This is a useful function which is basically a shortcut for drawing left, right, top and bottom alligned text.
-     *
-     * @param object context The context
-     * @param string font    The font
-     * @param int    size    The size of the text
-     * @param int    x       The X coordinate
-     * @param int    y       The Y coordinate
-     * @param string text    The text to draw
-     * @parm  string         The vertical alignment. Can be null. "center" gives center aligned  text, "top" gives top aligned text.
-     *                       Anything else produces bottom aligned text. Default is bottom.
-     * @param  string        The horizontal alignment. Can be null. "center" gives center aligned  text, "right" gives right aligned text.
-     *                       Anything else produces left aligned text. Default is left.
-     * @param  bool          Whether to show a bounding box around the text. Defaults not to
-     * @param int            The angle that the text should be rotate at (IN DEGREES)
-     * @param string         Background color for the text
-     * @param bool           Whether the text is bold or not
-     */
-    RGraph.Text = function (context, font, size,
-      x, y, text) {
-      // "Cache" the args as a local variable
-      var args = arguments;
-
-      // Handle undefined - change it to an empty string
-      if ((typeof (text) != 'string' && typeof (
-          text) != 'number') || text ==
-        'undefined') {
-        return;
-      }
-
-      /**
-       * This accommodates multi-line text
-       */
-      if (typeof (text) == 'string' && text.match(
-          /\r\n/)) {
-
-        var dimensions = RGraph.MeasureText('M',
-          args[11], font, size);
-
-        /**
-         * Measure the text (width and height)
-         */
-
-        var arr = text.split('\r\n');
-
-        /**
-         * Adjust the Y position
-         */
-
-        // This adjusts the initial y position
-        if (args[6] && args[6] == 'center') y =
-          (y - (dimensions[1] * ((arr.length -
-            1) / 2)));
-
-        for (var i = 1; i < arr.length; ++i) {
-
-          RGraph.Text(context,
-            font,
-            size,
-            args[9] == -90 ? (x + (size * 1.5)) :
-            x,
-            y + (dimensions[1] * i),
-            arr[i],
-            args[6] ? args[6] : null,
-            args[7],
-            args[8],
-            args[9],
-            args[10],
-            args[11],
-            args[12]);
-        }
-
-        // Update text to just be the first line
-        text = arr[0];
-      }
-
-      // Accommodate MSIE
-      if (document.all && ISOLD) {
-        y += 2;
-      }
-
-      context.font = (args[11] ? 'Bold ' : '') +
-        size + 'pt ' + font;
-
-      var i;
-      var origX = x;
-      var origY = y;
-      var originalFillStyle = context.fillStyle;
-      var originalLineWidth = context.lineWidth;
-
-      // Need these now the angle can be specified, ie defaults for the former two args
-      if (typeof (args[6]) == 'undefined') args[
-        6] = 'bottom'; // Vertical alignment. Default to bottom/baseline
-      if (typeof (args[7]) == 'undefined') args[
-        7] = 'left'; // Horizontal alignment. Default to left
-      if (typeof (args[8]) == 'undefined') args[
-        8] = null; // Show a bounding box. Useful for positioning during development. Defaults to false
-      if (typeof (args[9]) == 'undefined') args[
-        9] = 0; // Angle (IN DEGREES) that the text should be drawn at. 0 is middle right, and it goes clockwise
-
-      // The alignment is recorded here for purposes of Opera compatibility
-      if (navigator.userAgent.indexOf('Opera') !=
-        -1) {
-        context.canvas.__rgraph_valign__ = args[
-          6];
-        context.canvas.__rgraph_halign__ = args[
-          7];
-      }
-
-      // First, translate to x/y coords
-      context.save();
-
-      context.canvas.__rgraph_originalx__ = x;
-      context.canvas.__rgraph_originaly__ = y;
-
-      context.translate(x, y);
-      x = 0;
-      y = 0;
-
-      // Rotate the canvas if need be
-      if (args[9]) {
-        context.rotate(args[9] / (180 / PI));
-      }
-
-      // Vertical alignment - defaults to bottom
-      if (args[6]) {
-
-        var vAlign = args[6];
-
-        if (vAlign == 'center') {
-          context.textBaseline = 'middle';
-        } else if (vAlign == 'top') {
-          context.textBaseline = 'top';
-        }
-      }
-
-      // Hoeizontal alignment - defaults to left
-      if (args[7]) {
-
-        var hAlign = args[7];
-        var width = context.measureText(text).width;
-
-        if (hAlign) {
-          if (hAlign == 'center') {
-            context.textAlign = 'center';
-          } else if (hAlign == 'right') {
-            context.textAlign = 'right';
-          }
-        }
-      }
-
-      context.fillStyle = originalFillStyle;
-
-      /**
-       * Draw a bounding box if requested
-       */
-      context.save();
-      context.fillText(text, 0, 0);
-      context.lineWidth = 1;
-
-      var width = context.measureText(text).width;
-      var width_offset = (hAlign == 'center' ?
-        (width / 2) : (hAlign == 'right' ?
-          width : 0));
-      var height = size * 1.5; // !!!
-      var height_offset = (vAlign == 'center' ?
-        (height / 2) : (vAlign == 'top' ?
-          height : 0));
-      var ieOffset = ISOLD ? 2 : 0;
-
-      if (args[8]) {
-
-        context.strokeRect(-3 - width_offset,
-          0 - 3 - height - ieOffset +
-          height_offset,
-          width + 6,
-          height + 6);
-        /**
-         * If requested, draw a background for the text
-         */
-        if (args[10]) {
-          context.fillStyle = args[10];
-          context.fillRect(-3 - width_offset,
-            0 - 3 - height - ieOffset +
-            height_offset,
-            width + 6,
-            height + 6);
-        }
-
-        context.fillStyle = originalFillStyle;
-
-        /**
-         * Do the actual drawing of the text
-         */
-        context.fillText(text, 0, 0);
-      }
-      context.restore();
-
-      // Reset the lineWidth
-      context.lineWidth = originalLineWidth;
-
-      context.restore();
-    }
-
-    /**
-     * Clears the canvas by setting the width. You can specify a colour if you wish.
-     *
-     * @param object canvas The canvas to clear
-     */
-    RGraph.Clear = function (canvas) {
-      if (!canvas) {
-        return;
-      }
-
-      RGraph.FireCustomEvent(canvas.__object__,
-        'onbeforeclear');
-
-      var context = canvas.getContext('2d');
-      var color = arguments[1];
-
-      if (ISIE8 && !color) {
-        color = 'white';
-      }
-
-      /**
-       * Can now clear the canvas back to fully transparent
-       */
-      if (!color || (color && color ==
-          'rgba(0,0,0,0)' || color ==
-          'transparent')) {
-
-        context.clearRect(0, 0, canvas.width,
-          canvas.height);
-
-        // Reset the globalCompositeOperation
-        context.globalCompositeOperation =
-          'source-over';
-
-      } else {
-
-        context.fillStyle = color;
-        context = canvas.getContext('2d');
-        context.beginPath();
-
-        if (ISIE8) {
-          context.fillRect(0, 0, canvas.width,
-            canvas.height);
-        } else {
-          context.fillRect(-10, -10, canvas.width +
-            20, canvas.height + 20);
-        }
-
-        context.fill();
-      }
-
-      //if (RGraph.ClearAnnotations) {
-      //RGraph.ClearAnnotations(canvas.id);
-      //}
-
-      /**
-       * This removes any background image that may be present
-       */
-      if (RGraph.Registry.Get(
-          'chart.background.image.' + canvas.id
-        )) {
-        var img = RGraph.Registry.Get(
-          'chart.background.image.' + canvas.id
-        );
-        img.style.position = 'absolute';
-        img.style.left = '-10000px';
-        img.style.top = '-10000px';
-      }
-
-      /**
-       * This hides the tooltip that is showing IF it has the same canvas ID as
-       * that which is being cleared
-       */
-      if (RGraph.Registry.Get('chart.tooltip')) {
-        RGraph.HideTooltip(canvas);
-        //RGraph.Redraw();
-      }
-
-      /**
-       * Set the cursor to default
-       */
-      canvas.style.cursor = 'default';
-
-      RGraph.FireCustomEvent(canvas.__object__,
-        'onclear');
-    }
-
-    /**
-     * Draws the title of the graph
-     *
-     * @param object  canvas The canvas object
-     * @param string  text   The title to write
-     * @param integer gutter The size of the gutter
-     * @param integer        The center X point (optional - if not given it will be generated from the canvas width)
-     * @param integer        Size of the text. If not given it will be 14
-     */
-    RGraph.DrawTitle = function (obj, text,
-      gutterTop) {
-      var ca = canvas = obj.canvas;
-      var co = context = obj.context;
-      var prop = obj.properties;
-
-      var gutterLeft = prop['chart.gutter.left'];
-      var gutterRight = prop[
-        'chart.gutter.right'];
-      var gutterTop = gutterTop;
-      var gutterBottom = prop[
-        'chart.gutter.bottom'];
-      var size = arguments[4] ? arguments[4] :
-        12;
-      var bold = prop['chart.title.bold'];
-      var centerx = (arguments[3] ? arguments[3] :
-        ((ca.width - gutterLeft - gutterRight) /
-          2) + gutterLeft);
-      var keypos = prop['chart.key.position'];
-      var vpos = prop['chart.title.vpos'];
-      var hpos = prop['chart.title.hpos'];
-      var bgcolor = prop[
-        'chart.title.background'];
-      var x = prop['chart.title.x'];
-      var y = prop['chart.title.y'];
-      var halign = 'center';
-      var valign = 'center';
-
-      // Account for 3D effect by faking the key position
-      if (obj.type == 'bar' && prop[
-          'chart.variant'] == '3d') {
-        keypos = 'gutter';
-      }
-
-      co.beginPath();
-      co.fillStyle = prop['chart.text.color'] ?
-        prop['chart.text.color'] : 'black';
-
-      /**
-       * Vertically center the text if the key is not present
-       */
-      if (keypos && keypos != 'gutter') {
-        var valign = 'center';
-
-      } else if (!keypos) {
-        var valign = 'center';
-
-      } else {
-        var valign = 'bottom';
-      }
-
-      // if chart.title.vpos is a number, use that
-      if (typeof (prop['chart.title.vpos']) ==
-        'number') {
-        vpos = prop['chart.title.vpos'] *
-          gutterTop;
-
-        if (prop['chart.xaxispos'] == 'top') {
-          vpos = prop['chart.title.vpos'] *
-            gutterBottom + gutterTop + (ca.height -
-              gutterTop - gutterBottom);
-        }
-
-      } else {
-        vpos = gutterTop - size - 5;
-
-        if (prop['chart.xaxispos'] == 'top') {
-          vpos = ca.height - gutterBottom +
-            size + 5;
-        }
-      }
-
-      // if chart.title.hpos is a number, use that. It's multiplied with the (entire) canvas width
-      if (typeof (hpos) == 'number') {
-        centerx = hpos * ca.width;
-      }
-
-      /**
-       * Now the chart.title.x and chart.title.y settings override (is set) the above
-       */
-      if (typeof (x) == 'number') centerx = x;
-      if (typeof (y) == 'number') vpos = y;
-
-      /**
-       * Horizontal alignment can now (Jan 2013) be specified
-       */
-      if (typeof (prop['chart.title.halign']) ==
-        'string') {
-        halign = prop['chart.title.halign'];
-      }
-
-      /**
-       * Vertical alignment can now (Jan 2013) be specified
-       */
-      if (typeof (prop['chart.title.valign']) ==
-        'string') {
-        valign = prop['chart.title.valign'];
-      }
-
-      // Set the colour
-      if (typeof (prop['chart.title.color'] !=
-          null)) {
-        var oldColor = context.fillStyle
-        var newColor = prop['chart.title.color']
-        context.fillStyle = newColor ? newColor :
-          'black';
-      }
-
-      /**
-       * Default font is Arial
-       */
-      var font = prop['chart.text.font'];
-
-      /**
-       * Override the default font with chart.title.font
-       */
-      if (typeof (prop['chart.title.font']) ==
-        'string') {
-        font = prop['chart.title.font'];
-      }
-
-      /**
-       * Draw the title
-       */
-      RGraph.Text2(obj, {
-        'font': font,
-        'size': size,
-        'x': centerx,
-        'y': vpos,
-        'text': text,
-        'valign': valign,
-        'halign': halign,
-        'bounding': bgcolor != null,
-        'bounding.fill': bgcolor,
-        'bold': bold,
-        'tag': 'title'
-      });
-
-      // Reset the fill colour
-      context.fillStyle = oldColor;
-    }
-
-    /**
-    * This function returns the mouse position in relation to the canvas
-    * 
-    * @param object e The event object.
-    *
-    RGraph.getMouseXY = function (e)
-    {
-        var el = (ISOLD ? event.srcElement : e.target);
-        var x;
-        var y;
-
-        // ???
-        var paddingLeft = el.style.paddingLeft ? parseInt(el.style.paddingLeft) : 0;
-        var paddingTop  = el.style.paddingTop ? parseInt(el.style.paddingTop) : 0;
-        var borderLeft  = el.style.borderLeftWidth ? parseInt(el.style.borderLeftWidth) : 0;
-        var borderTop   = el.style.borderTopWidth  ? parseInt(el.style.borderTopWidth) : 0;
-        
-        if (ISIE8) e = event;
-
-        // Browser with offsetX and offsetY
-        if (typeof(e.offsetX) == 'number' && typeof(e.offsetY) == 'number') {
-            x = e.offsetX;
-            y = e.offsetY;
-
-        // FF and other
-        } else {
-            x = 0;
-            y = 0;
-
-            while (el != document.body && el) {
-                x += el.offsetLeft;
-                y += el.offsetTop;
-
-                el = el.offsetParent;
-            }
-
-            x = e.pageX - x;
-            y = e.pageY - y;
-        }
-
-        return [x, y];
-    }*/
-
-    RGraph.getMouseXY = function (e) {
-      var el = e.target;
-      var ca = el;
-      var caStyle = ca.style;
-      var offsetX = 0;
-      var offsetY = 0;
-      var x;
-      var y;
-      var ISFIXED = (ca.style.position ==
-        'fixed');
-      var borderLeft = parseInt(caStyle.borderLeftWidth) ||
-        0;
-      var borderTop = parseInt(caStyle.borderTopWidth) ||
-        0;
-      var paddingLeft = parseInt(caStyle.paddingLeft) ||
-        0
-      var paddingTop = parseInt(caStyle.paddingTop) ||
-        0
-      var additionalX = borderLeft +
-        paddingLeft;
-      var additionalY = borderTop + paddingTop;
-
-      if (typeof (e.offsetX) == 'number' &&
-        typeof (e.offsetY) == 'number') {
-
-        if (ISFIXED) {
-          if (ISOPERA) {
-            x = e.offsetX;
-            y = e.offsetY;
-
-          } else if (ISWEBKIT) {
-            x = e.offsetX - paddingLeft -
-              borderLeft;
-            y = e.offsetY - paddingTop -
-              borderTop;
-
-          } else if (ISIE) {
-            x = e.offsetX - paddingLeft;
-            y = e.offsetY - paddingTop;
-
-          } else {
-            x = e.offsetX;
-            y = e.offsetY;
-          }
-
-        } else {
-
-          if (!ISIE && !ISOPERA) {
-            x = e.offsetX - borderLeft -
-              paddingLeft;
-            y = e.offsetY - borderTop -
-              paddingTop;
-
-          } else if (ISIE) {
-            x = e.offsetX - paddingLeft;
-            y = e.offsetY - paddingTop;
-
-          } else {
-            x = e.offsetX;
-            y = e.offsetY;
-          }
-        }
-
-        /**
-         * This is for Firefox - which doesn't support .offsetX or .offsetY
-         */
-      } else if (e.layerX && e.layerY) {
-
-        // Give the canvas position if it has none
-        if (!ca.style.position) {
-          ca.style.position = 'relative';
-          ca.style.top = 0;
-          ca.style.left = 0;
-        }
-
-        x = e.layerX;
-        y = e.layerY;
-
-        if (ISFIXED) {
-          x = e.layerX - borderLeft -
-            paddingLeft;
-          y = e.layerY - borderTop - paddingTop;
-        }
-
-      } else {
-
-        if (typeof (el.offsetParent) !=
-          'undefined') {
-          do {
-            offsetX += el.offsetLeft;
-            offsetY += el.offsetTop;
-          } while ((el = el.offsetParent));
-        }
-
-        x = e.pageX - offsetX - additionalX;
-        y = e.pageY - offsetY - additionalY;
-
-        x -= (2 * (parseInt(document.body.style
-          .borderLeftWidth) || 0));
-        y -= (2 * (parseInt(document.body.style
-          .borderTopWidth) || 0));
-
-        x += (parseInt(caStyle.borderLeftWidth) ||
-          0);
-        y += (parseInt(caStyle.borderTopWidth) ||
-          0);
-      }
-
-      // We return a javascript array with x and y defined
-      return [x, y];
-    }
-
-    /**
-     * This function returns a two element array of the canvas x/y position in
-     * relation to the page
-     *
-     * @param object canvas
-     */
-    RGraph.getCanvasXY = function (canvas) {
-      var x = 0;
-      var y = 0;
-      var el = canvas; // !!!
-
-      do {
-
-        x += el.offsetLeft;
-        y += el.offsetTop;
-
-        // ACCOUNT FOR TABLES IN wEBkIT
-        if (el.tagName.toLowerCase() == 'table' &&
-          (ISCHROME || ISSAFARI)) {
-          x += parseInt(el.border) || 0;
-          y += parseInt(el.border) || 0;
-        }
-
-        el = el.offsetParent;
-
-      } while (el && el.tagName.toLowerCase() !=
-        'body');
-
-      var paddingLeft = canvas.style.paddingLeft ?
-        parseInt(canvas.style.paddingLeft) : 0;
-      var paddingTop = canvas.style.paddingTop ?
-        parseInt(canvas.style.paddingTop) : 0;
-      var borderLeft = canvas.style.borderLeftWidth ?
-        parseInt(canvas.style.borderLeftWidth) :
-        0;
-      var borderTop = canvas.style.borderTopWidth ?
-        parseInt(canvas.style.borderTopWidth) :
-        0;
-
-      if (navigator.userAgent.indexOf('Firefox') >
-        0) {
-        x += parseInt(document.body.style.borderLeftWidth) ||
-          0;
-        y += parseInt(document.body.style.borderTopWidth) ||
-          0;
-      }
-
-      return [x + paddingLeft + borderLeft, y +
-        paddingTop + borderTop
-      ];
-    }
-
-    /**
-     * This function determines whther a canvas is fixed (CSS positioning) or not. If not it returns
-     * false. If it is then the element that is fixed is returned (it may be a parent of the canvas).
-     *
-     * @return Either false or the fixed positioned element
-     */
-    RGraph.isFixed = function (canvas) {
-      var obj = canvas;
-      var i = 0;
-
-      while (obj.tagName.toLowerCase() !=
-        'body' && i < 99) {
-
-        if (obj.style.position == 'fixed') {
-          return obj;
-        }
-
-        obj = obj.offsetParent;
-      }
-
-      return false;
-    }
-
-    /**
-     * Registers a graph object (used when the canvas is redrawn)
-     *
-     * @param object obj The object to be registered
-     */
-    RGraph.Register = function (obj) {
-      // Checking this property ensures the object is only registered once
-      if (!obj.Get('chart.noregister')) {
-        // As of 21st/1/2012 the object registry is now used
-        RGraph.ObjectRegistry.Add(obj);
-        obj.Set('chart.noregister', true);
-      }
-    }
-
-    /**
-     * Causes all registered objects to be redrawn
-     *
-     * @param string An optional color to use to clear the canvas
-     */
-    RGraph.Redraw = function () {
-      var objectRegistry = RGraph.ObjectRegistry
-        .objects.byCanvasID;
-
-      // Get all of the canvas tags on the page
-      var tags = document.getElementsByTagName(
-        'canvas');
-      for (var i = 0; i < tags.length; ++i) {
-        if (tags[i].__object__ && tags[i].__object__
-          .isRGraph) {
-
-          // Only clear the canvas if it's not Trace'ing - this applies to the Line/Scatter Trace effects
-          if (!tags[i].noclear) {
-            RGraph.Clear(tags[i], arguments[0] ?
-              arguments[0] : null);
-          }
-        }
-      }
-
-      // Go through the object registry and redraw *all* of the canvas'es that have been registered
-      for (var i = 0; i < objectRegistry.length; ++
-        i) {
-        if (objectRegistry[i]) {
-          var id = objectRegistry[i][0];
-          objectRegistry[i][1].Draw();
-        }
-      }
-    }
-
-    /**
-     * Causes all registered objects ON THE GIVEN CANVAS to be redrawn
-     *
-     * @param canvas object The canvas object to redraw
-     * @param        bool   Optional boolean which defaults to true and determines whether to clear the canvas
-     */
-    RGraph.RedrawCanvas = function (canvas) {
-      var objects = RGraph.ObjectRegistry.getObjectsByCanvasID(
-        canvas.id);
-
-      /**
-       * First clear the canvas
-       */
-      if (!arguments[1] || (typeof (arguments[1]) ==
-          'boolean' && !arguments[1] == false)) {
-        RGraph.Clear(canvas);
-      }
-
-      /**
-       * Now redraw all the charts associated with that canvas
-       */
-      for (var i = 0; i < objects.length; ++i) {
-        if (objects[i]) {
-          if (objects[i] && objects[i].isRGraph) { // Is it an RGraph object ??
-            objects[i].Draw();
-          }
-        }
-      }
-    }
-
-    /**
-     * This function draws the background for the bar chart, line chart and scatter chart.
-     *
-     * @param  object obj The graph object
-     */
-    RGraph.background.Draw = function (obj) {
-      var ca = canvas = obj.canvas;
-      var co = context = obj.context;
-      var prop = obj.properties;
-
-      var height = 0;
-      var gutterLeft = obj.gutterLeft;
-      var gutterRight = obj.gutterRight;
-      var gutterTop = obj.gutterTop;
-      var gutterBottom = obj.gutterBottom;
-      var variant = prop['chart.variant'];
-
-      co.fillStyle = prop['chart.text.color'];
-
-      // If it's a bar and 3D variant, translate
-      if (variant == '3d') {
-        co.save();
-        co.translate(10, -5);
-      }
-
-      // X axis title
-      if (typeof (prop['chart.title.xaxis']) ==
-        'string' && prop['chart.title.xaxis'].length
-      ) {
-
-        var size = prop['chart.text.size'] + 2;
-        var font = prop['chart.text.font'];
-        var bold = prop[
-          'chart.title.xaxis.bold'];
-
-        if (typeof (prop[
-            'chart.title.xaxis.size']) ==
-          'number') {
-          size = prop['chart.title.xaxis.size'];
-        }
-
-        if (typeof (prop[
-            'chart.title.xaxis.font']) ==
-          'string') {
-          font = prop['chart.title.xaxis.font'];
-        }
-
-        var hpos = ((ca.width - gutterLeft -
-          gutterRight) / 2) + gutterLeft;
-        var vpos = ca.height - gutterBottom +
-          25;
-
-        if (typeof (prop[
-            'chart.title.xaxis.pos']) ==
-          'number') {
-          vpos = ca.height - (gutterBottom *
-            prop['chart.title.xaxis.pos']);
-        }
-
-        RGraph.Text2(obj, {
-          'font': font,
-          'size': size,
-          'x': hpos,
-          'y': vpos,
-          'text': prop['chart.title.xaxis'],
-          'halign': 'center',
-          'valign': 'center',
-          'bold': bold,
-          'tag': 'title xaxis'
-        });
-
-      }
-
-      // Y axis title
-      if (typeof (prop['chart.title.yaxis']) ==
-        'string' && prop['chart.title.yaxis'].length
-      ) {
-
-        var size = prop['chart.text.size'] + 2;
-        var font = prop['chart.text.font'];
-        var angle = 270;
-        var bold = prop[
-          'chart.title.yaxis.bold'];
-        var color = prop[
-          'chart.title.yaxis.color'];
-
-        if (typeof (prop[
-            'chart.title.yaxis.pos']) ==
-          'number') {
-          var yaxis_title_pos = prop[
-              'chart.title.yaxis.pos'] *
-            gutterLeft;
-        } else {
-          var yaxis_title_pos = ((gutterLeft -
-            25) / gutterLeft) * gutterLeft;
-        }
-
-        if (typeof (prop[
-            'chart.title.yaxis.size']) ==
-          'number') {
-          size = prop['chart.title.yaxis.size'];
-        }
-
-        if (typeof (prop[
-            'chart.title.yaxis.font']) ==
-          'string') {
-          font = prop['chart.title.yaxis.font'];
-        }
-
-        if (prop['chart.title.yaxis.align'] ==
-          'right' || prop[
-            'chart.title.yaxis.position'] ==
-          'right') {
-          angle = 90;
-          yaxis_title_pos = prop[
-              'chart.title.yaxis.pos'] ? (ca.width -
-              gutterRight) + (prop[
-                'chart.title.yaxis.pos'] *
-              gutterRight) :
-            ca.width - gutterRight + prop[
-              'chart.text.size'] + 5;
-        } else {
-          yaxis_title_pos = yaxis_title_pos;
-        }
-
-        context.fillStyle = color;
-        RGraph.Text2(obj, {
-          'font': font,
-          'size': size,
-          'x': yaxis_title_pos,
-          'y': ((ca.height - gutterTop -
-              gutterBottom) / 2) +
-            gutterTop,
-          'valign': 'center',
-          'halign': 'center',
-          'angle': angle,
-          'bold': bold,
-          'text': prop['chart.title.yaxis'],
-          'tag': 'title yaxis'
-        });
-      }
-
-      /**
-       * If the background color is spec ified - draw that. It's a rectangle that fills the
-       * entire are within the gutters
-       */
-      var bgcolor = prop[
-        'chart.background.color'];
-      if (bgcolor) {
-        co.fillStyle = bgcolor;
-        co.fillRect(gutterLeft, gutterTop, ca.width -
-          gutterLeft - gutterRight, ca.height -
-          gutterTop - gutterBottom);
-      }
-
-      /**
-       * Draw horizontal background bars
-       */
-      co.beginPath(); // Necessary?
-
-      co.fillStyle = prop[
-        'chart.background.barcolor1'];
-      co.strokeStyle = co.fillStyle;
-      height = (ca.height - gutterBottom);
-
-      for (var i = gutterTop; i < height; i +=
-        80) {
-        co.fillRect(gutterLeft, i, ca.width -
-          gutterLeft - gutterRight, Math.min(
-            40, ca.height - gutterBottom - i)
-        );
-      }
-
-      co.fillStyle = prop[
-        'chart.background.barcolor2'];
-      co.strokeStyle = co.fillStyle;
-      height = (ca.height - gutterBottom);
-
-      for (var i = (40 + gutterTop); i < height; i +=
-        80) {
-        co.fillRect(gutterLeft, i, ca.width -
-          gutterLeft - gutterRight, i + 40 >
-          (ca.height - gutterBottom) ? ca.height -
-          (gutterBottom + i) : 40);
-      }
-
-      //context.stroke();
-      co.beginPath();
-
-      // Draw the background grid
-      if (prop['chart.background.grid']) {
-
-        // If autofit is specified, use the .numhlines and .numvlines along with the width to work
-        // out the hsize and vsize
-        if (prop[
-            'chart.background.grid.autofit']) {
-
-          /**
-           * Align the grid to the tickmarks
-           */
-          if (prop[
-              'chart.background.grid.autofit.align'
-            ]) {
-
-            // Align the horizontal lines
-            obj.Set(
-              'chart.background.grid.autofit.numhlines',
-              prop['chart.ylabels.count']);
-
-            // Align the vertical lines for the line
-            if (obj.type == 'line') {
-              if (prop['chart.labels'] && prop[
-                  'chart.labels'].length) {
-                obj.Set(
-                  'chart.background.grid.autofit.numvlines',
-                  prop['chart.labels'].length -
-                  1);
-              } else {
-                obj.Set(
-                  'chart.background.grid.autofit.numvlines',
-                  obj.data[0].length - 1);
-              }
-
-              // Align the vertical lines for the bar
-            } else if (obj.type == 'bar' &&
-              prop['chart.labels'] && prop[
-                'chart.labels'].length) {
-              obj.Set(
-                'chart.background.grid.autofit.numvlines',
-                prop['chart.labels'].length);
-            }
-          }
-
-          var vsize = ((ca.width - gutterLeft -
-            gutterRight)) / prop[
-            'chart.background.grid.autofit.numvlines'
-          ];
-          var hsize = (ca.height - gutterTop -
-            gutterBottom) / prop[
-            'chart.background.grid.autofit.numhlines'
-          ];
-
-          obj.Set('chart.background.grid.vsize',
-            vsize);
-          obj.Set('chart.background.grid.hsize',
-            hsize);
-        }
-
-        co.beginPath();
-        co.lineWidth = prop[
-            'chart.background.grid.width'] ?
-          prop['chart.background.grid.width'] :
-          1;
-        co.strokeStyle = prop[
-          'chart.background.grid.color'];
-
-        // Draw the horizontal lines
-        if (prop['chart.background.grid.hlines']) {
-          height = (ca.height - gutterBottom)
-          for (y = gutterTop; y < height; y +=
-            prop['chart.background.grid.hsize']
-          ) {
-            context.moveTo(gutterLeft, Math.round(
-              y));
-            context.lineTo(ca.width -
-              gutterRight, Math.round(y));
-          }
-        }
-
-        if (prop['chart.background.grid.vlines']) {
-          // Draw the vertical lines
-          var width = (ca.width - gutterRight)
-          for (x = gutterLeft; x <= width; x +=
-            prop['chart.background.grid.vsize']
-          ) {
-            co.moveTo(Math.round(x), gutterTop);
-            co.lineTo(Math.round(x), ca.height -
-              gutterBottom);
-          }
-        }
-
-        if (prop['chart.background.grid.border']) {
-          // Make sure a rectangle, the same colour as the grid goes around the graph
-          co.strokeStyle = prop[
-            'chart.background.grid.color'];
-          co.strokeRect(Math.round(gutterLeft),
-            Math.round(gutterTop), ca.width -
-            gutterLeft - gutterRight, ca.height -
-            gutterTop - gutterBottom);
-        }
-      }
-
-      context.stroke();
-
-      // If it's a bar and 3D variant, translate
-      if (variant == '3d') {
-        co.restore();
-      }
-
-      // Draw the title if one is set
-      if (typeof (prop['chart.title']) ==
-        'string') {
-
-        if (obj.type == 'gantt') {
-          gutterTop -= 10;
-        }
-
-        RGraph.DrawTitle(obj,
-          prop['chart.title'],
-          gutterTop,
-          null,
-          prop['chart.title.size'] ? prop[
-            'chart.title.size'] : prop[
-            'chart.text.size'] + 2);
-      }
-
-      co.stroke();
-    }
-
-    /**
-     * Makes a clone of an object
-     *
-     * @param obj val The object to clone
-     */
-    RGraph.array_clone = function (obj) {
-      if (obj == null || typeof (obj) !=
-        'object') {
-        return obj;
-      }
-
-      var temp = [];
-
-      for (var i = 0; i < obj.length; ++i) {
-
-        if (typeof (obj[i]) == 'number') {
-          temp[i] = (function (arg) {
-            return Number(arg);
-          })(obj[i]);
-        } else if (typeof (obj[i]) == 'string') {
-          temp[i] = (function (arg) {
-            return String(arg);
-          })(obj[i]);
-        } else if (typeof (obj[i]) ==
-          'function') {
-          temp[i] = obj[i];
-
-        } else {
-          temp[i] = RGraph.array_clone(obj[i]);
-        }
-      }
-
-      return temp;
-    }
-
-    /**
-     * Formats a number with thousand seperators so it's easier to read
-     *
-     * @param  integer obj The chart object
-     * @param  integer num The number to format
-     * @param  string      The (optional) string to prepend to the string
-     * @param  string      The (optional) string to append to the string
-     * @return string      The formatted number
-     */
-    RGraph.number_format = function (obj, num) {
-      var ca = obj.canvas;
-      var co = obj.context;
-      var prop = obj.properties;
-
-      var i;
-      var prepend = arguments[2] ? String(
-        arguments[2]) : '';
-      var append = arguments[3] ? String(
-        arguments[3]) : '';
-      var output = '';
-      var decimal = '';
-      var decimal_seperator = typeof (prop[
-          'chart.scale.point']) == 'string' ?
-        prop['chart.scale.point'] : '.';
-      var thousand_seperator = typeof (prop[
-          'chart.scale.thousand']) == 'string' ?
-        prop['chart.scale.thousand'] : ',';
-      RegExp.$1 = '';
-      var i, j;
-
-      if (typeof (prop['chart.scale.formatter']) ==
-        'function') {
-        return prop['chart.scale.formatter'](
-          obj, num);
-      }
-
-      // Ignore the preformatted version of "1e-2"
-      if (String(num).indexOf('e') > 0) {
-        return String(prepend + String(num) +
-          append);
-      }
-
-      // We need then number as a string
-      num = String(num);
-
-      // Take off the decimal part - we re-append it later
-      if (num.indexOf('.') > 0) {
-        var tmp = num;
-        num = num.replace(/\.(.*)/, ''); // The front part of the number
-        decimal = tmp.replace(/(.*)\.(.*)/,
-          '$2'); // The decimal part of the number
-      }
-
-      // Thousand seperator
-      //var seperator = arguments[1] ? String(arguments[1]) : ',';
-      var seperator = thousand_seperator;
-
-      /**
-       * Work backwards adding the thousand seperators
-       */
-      var foundPoint;
-      for (i = (num.length - 1), j = 0; i >= 0; j++,
-        i--) {
-        var character = num.charAt(i);
-
-        if (j % 3 == 0 && j != 0) {
-          output += seperator;
-        }
-
-        /**
-         * Build the output
-         */
-        output += character;
-      }
-
-      /**
-       * Now need to reverse the string
-       */
-      var rev = output;
-      output = '';
-      for (i = (rev.length - 1); i >= 0; i--) {
-        output += rev.charAt(i);
-      }
-
-      // Tidy up
-      //output = output.replace(/^-,/, '-');
-      if (output.indexOf('-' + prop[
-          'chart.scale.thousand']) == 0) {
-        output = '-' + output.substr(('-' +
-          prop['chart.scale.thousand']).length);
-      }
-
-      // Reappend the decimal
-      if (decimal.length) {
-        output = output + decimal_seperator +
-          decimal;
-        decimal = '';
-        RegExp.$1 = '';
-      }
-
-      // Minor bugette
-      if (output.charAt(0) == '-') {
-        output = output.replace(/-/, '');
-        prepend = '-' + prepend;
-      }
-
-      return prepend + output + append;
-    }
-
-    /**
-     * Draws horizontal coloured bars on something like the bar, line or scatter
-     */
-    RGraph.DrawBars = function (obj) {
-      var hbars = obj.Get(
-        'chart.background.hbars');
-
-      /**
-       * Draws a horizontal bar
-       */
-      obj.context.beginPath();
-
-      for (i = 0; i < hbars.length; ++i) {
-
-        // If null is specified as the "height", set it to the upper max value
-        if (hbars[i][1] == null) {
-          hbars[i][1] = obj.scale2.max;
-
-          // If the first index plus the second index is greater than the max value, adjust accordingly
-        } else if (hbars[i][0] + hbars[i][1] >
-          obj.scale2.max) {
-          hbars[i][1] = obj.scale2.max - hbars[
-            i][0];
-        }
-
-        // If height is negative, and the abs() value is greater than .max, use a negative max instead
-        if (Math.abs(hbars[i][1]) > obj.scale2.max) {
-          hbars[i][1] = -1 * obj.scale2.max;
-        }
-
-        // If start point is greater than max, change it to max
-        if (Math.abs(hbars[i][0]) > obj.scale2.max) {
-          hbars[i][0] = obj.scale2.max;
-        }
-
-        // If start point plus height is less than negative max, use the negative max plus the start point
-        if (hbars[i][0] + hbars[i][1] < (-1 *
-            obj.scale2.max)) {
-          hbars[i][1] = -1 * (obj.scale2.max +
-            hbars[i][0]);
-        }
-
-        // If the X axis is at the bottom, and a negative max is given, warn the user
-        if (obj.Get('chart.xaxispos') ==
-          'bottom' && (hbars[i][0] < 0 || (
-            hbars[i][1] + hbars[i][1] < 0))) {
-          alert('[' + obj.type.toUpperCase() +
-            ' (ID: ' + obj.id +
-            ') BACKGROUND HBARS] You have a negative value in one of your background hbars values, whilst the X axis is in the center'
-          );
-        }
-
-        var ystart = (obj.grapharea - (((hbars[
-          i][0] - obj.scale2.min) / (
-          obj.scale2.max - obj.scale2.min
-        )) * obj.grapharea));
-        var height = (Math.min(hbars[i][1], obj
-          .max - hbars[i][0]) / (obj.scale2
-          .max - obj.scale2.min)) * obj.grapharea;
-
-        // Account for the X axis being in the center
-        if (obj.Get('chart.xaxispos') ==
-          'center') {
-          ystart /= 2;
-          height /= 2;
-        }
-
-        ystart += obj.Get('chart.gutter.top')
-
-        var x = obj.Get('chart.gutter.left');
-        var y = ystart - height;
-        var w = obj.canvas.width - obj.Get(
-          'chart.gutter.left') - obj.Get(
-          'chart.gutter.right');
-        var h = height;
-
-        // Accommodate Opera :-/
-        if (navigator.userAgent.indexOf('Opera') !=
-          -1 && obj.Get('chart.xaxispos') ==
-          'center' && h < 0) {
-          h *= -1;
-          y = y - h;
-        }
-
-        /**
-         * Account for X axis at the top
-         */
-        if (obj.Get('chart.xaxispos') == 'top') {
-          y = obj.canvas.height - y;
-          h *= -1;
-        }
-
-        obj.context.fillStyle = hbars[i][2];
-        obj.context.fillRect(x, y, w, h);
-      }
-
-      obj.context.fill();
-    }
-
-    /**
-     * Draws in-graph labels.
-     *
-     * @param object obj The graph object
-     */
-    RGraph.DrawInGraphLabels = function (obj) {
-      var canvas = obj.canvas;
-      var context = obj.context;
-      var labels = obj.Get(
-        'chart.labels.ingraph');
-      var labels_processed = [];
-
-      // Defaults
-      var fgcolor = 'black';
-      var bgcolor = 'white';
-      var direction = 1;
-
-      if (!labels) {
-        return;
-      }
-
-      /**
-       * Preprocess the labels array. Numbers are expanded
-       */
-      for (var i = 0; i < labels.length; ++i) {
-        if (typeof (labels[i]) == 'number') {
-          for (var j = 0; j < labels[i]; ++j) {
-            labels_processed.push(null);
-          }
-        } else if (typeof (labels[i]) ==
-          'string' || typeof (labels[i]) ==
-          'object') {
-          labels_processed.push(labels[i]);
-
-        } else {
-          labels_processed.push('');
-        }
-      }
-
-      /**
-       * Turn off any shadow
-       */
-      RGraph.NoShadow(obj);
-
-      if (labels_processed && labels_processed.length >
-        0) {
-
-        for (var i = 0; i < labels_processed.length; ++
-          i) {
-          if (labels_processed[i]) {
-            var coords = obj.coords[i];
-
-            if (coords && coords.length > 0) {
-              var x = (obj.type == 'bar' ?
-                coords[0] + (coords[2] / 2) :
-                coords[0]);
-              var y = (obj.type == 'bar' ?
-                coords[1] + (coords[3] / 2) :
-                coords[1]);
-              var length = typeof (
-                  labels_processed[i][4]) ==
-                'number' ? labels_processed[i][
-                  4
-                ] : 25;
-
-              context.beginPath();
-              context.fillStyle = 'black';
-              context.strokeStyle = 'black';
-
-              if (obj.type == 'bar') {
-
-                /**
-                 * X axis at the top
-                 */
-                if (obj.Get('chart.xaxispos') ==
-                  'top') {
-                  length *= -1;
-                }
-
-                if (obj.Get('chart.variant') ==
-                  'dot') {
-                  context.moveTo(Math.round(x),
-                    obj.coords[i][1] - 5);
-                  context.lineTo(Math.round(x),
-                    obj.coords[i][1] - 5 -
-                    length);
-
-                  var text_x = Math.round(x);
-                  var text_y = obj.coords[i][1] -
-                    5 - length;
-
-                } else if (obj.Get(
-                    'chart.variant') == 'arrow') {
-                  context.moveTo(Math.round(x),
-                    obj.coords[i][1] - 5);
-                  context.lineTo(Math.round(x),
-                    obj.coords[i][1] - 5 -
-                    length);
-
-                  var text_x = Math.round(x);
-                  var text_y = obj.coords[i][1] -
-                    5 - length;
-
-                } else {
-
-                  context.arc(Math.round(x), y,
-                    2.5, 0, 6.28, 0);
-                  context.moveTo(Math.round(x),
-                    y);
-                  context.lineTo(Math.round(x),
-                    y - length);
-
-                  var text_x = Math.round(x);
-                  var text_y = y - length;
-                }
-
-                context.stroke();
-                context.fill();
-
-              } else if (obj.type == 'line') {
-
-                if (
-                  typeof (labels_processed[i]) ==
-                  'object' &&
-                  typeof (labels_processed[i][3]) ==
-                  'number' &&
-                  labels_processed[i][3] == -1
-                ) {
-
-                  context.moveTo(Math.round(x),
-                    y + 5);
-                  context.lineTo(Math.round(x),
-                    y + 5 + length);
-
-                  context.stroke();
-                  context.beginPath();
-
-                  // This draws the arrow
-                  context.moveTo(Math.round(x),
-                    y + 5);
-                  context.lineTo(Math.round(x) -
-                    3, y + 10);
-                  context.lineTo(Math.round(x) +
-                    3, y + 10);
-                  context.closePath();
-
-                  var text_x = x;
-                  var text_y = y + 5 + length;
-
-                } else {
-
-                  var text_x = x;
-                  var text_y = y - 5 - length;
-
-                  context.moveTo(Math.round(x),
-                    y - 5);
-                  context.lineTo(Math.round(x),
-                    y - 5 - length);
-
-                  context.stroke();
-                  context.beginPath();
-
-                  // This draws the arrow
-                  context.moveTo(Math.round(x),
-                    y - 5);
-                  context.lineTo(Math.round(x) -
-                    3, y - 10);
-                  context.lineTo(Math.round(x) +
-                    3, y - 10);
-                  context.closePath();
-                }
-
-                context.fill();
-              }
-
-              // Taken out on the 10th Nov 2010 - unnecessary
-              //var width = context.measureText(labels[i]).width;
-
-              context.beginPath();
-
-              // Fore ground color
-              context.fillStyle = (typeof (
-                  labels_processed[i]) ==
-                'object' && typeof (
-                  labels_processed[i][1]) ==
-                'string') ? labels_processed[
-                i][1] : 'black';
-
-              RGraph.Text2(obj, {
-                'font': obj.Get(
-                  'chart.text.font'),
-                'size': obj.Get(
-                  'chart.text.size'),
-                'x': text_x,
-                'y': text_y,
-                'text': (typeof (
-                      labels_processed[i]) ==
-                    'object' && typeof (
-                      labels_processed[i][0]
-                    ) == 'string') ?
-                  labels_processed[i][0] : labels_processed[
-                    i],
-                'valign': 'bottom',
-                'halign': 'center',
-                'bounding': true,
-                'bounding.fill': (typeof (
-                      labels_processed[i]) ==
-                    'object' && typeof (
-                      labels_processed[i][2]
-                    ) == 'string') ?
-                  labels_processed[i][2] : 'white',
-                'tag': 'labels ingraph'
-              });
-              context.fill();
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * This function "fills in" key missing properties that various implementations lack
-     *
-     * @param object e The event object
-     */
-    RGraph.FixEventObject = function (e) {
-      if (ISOLD) {
-        var e = event;
-
-        e.pageX = (event.clientX + document.body
-          .scrollLeft);
-        e.pageY = (event.clientY + document.body
-          .scrollTop);
-        e.target = event.srcElement;
-
-        if (!document.body.scrollTop &&
-          document.documentElement.scrollTop) {
-          e.pageX += parseInt(document.documentElement
-            .scrollLeft);
-          e.pageY += parseInt(document.documentElement
-            .scrollTop);
-        }
-      }
-
-      // This is mainly for FF which doesn't provide offsetX
-      if (typeof (e.offsetX) == 'undefined' &&
-        typeof (e.offsetY) == 'undefined') {
-        var coords = RGraph.getMouseXY(e);
-        e.offsetX = coords[0];
-        e.offsetY = coords[1];
-      }
-
-      // Any browser that doesn't implement stopPropagation() (MSIE)
-      if (!e.stopPropagation) {
-        e.stopPropagation = function () {
-          window.event.cancelBubble = true;
-        }
-      }
-
-      return e;
-    }
-
-    /**
-     * Thisz function hides the crosshairs coordinates
-     */
-    RGraph.HideCrosshairCoords = function () {
-      var div = RGraph.Registry.Get(
-        'chart.coordinates.coords.div');
-
-      if (div && div.style.opacity == 1 && div.__object__
-        .Get('chart.crosshairs.coords.fadeout')
-      ) {
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.9;
-        }, 50);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.8;
-        }, 100);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.7;
-        }, 150);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.6;
-        }, 200);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.5;
-        }, 250);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.4;
-        }, 300);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.3;
-        }, 350);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.2;
-        }, 400);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0.1;
-        }, 450);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.opacity = 0;
-        }, 500);
-        setTimeout(function () {
-          RGraph.Registry.Get(
-            'chart.coordinates.coords.div'
-          ).style.display = 'none';
-        }, 550);
-      }
-    }
-
-    /**
-     * Draws the3D axes/background
-     */
-    RGraph.Draw3DAxes = function (obj) {
-      var gutterLeft = obj.Get(
-        'chart.gutter.left');
-      var gutterRight = obj.Get(
-        'chart.gutter.right');
-      var gutterTop = obj.Get(
-        'chart.gutter.top');
-      var gutterBottom = obj.Get(
-        'chart.gutter.bottom');
-
-      var context = obj.context;
-      var canvas = obj.canvas;
-
-      context.strokeStyle = '#aaa';
-      context.fillStyle = '#ddd';
-
-      // Draw the vertical left side
-      context.beginPath();
-      context.moveTo(gutterLeft, gutterTop);
-      context.lineTo(gutterLeft + 10, gutterTop -
-        5);
-      context.lineTo(gutterLeft + 10, canvas.height -
-        gutterBottom - 5);
-      context.lineTo(gutterLeft, canvas.height -
-        gutterBottom);
-      context.closePath();
-
-      context.stroke();
-      context.fill();
-
-      // Draw the bottom floor
-      context.beginPath();
-      context.moveTo(gutterLeft, canvas.height -
-        gutterBottom);
-      context.lineTo(gutterLeft + 10, canvas.height -
-        gutterBottom - 5);
-      context.lineTo(canvas.width - gutterRight +
-        10, canvas.height - gutterBottom - 5);
-      context.lineTo(canvas.width - gutterRight,
-        canvas.height - gutterBottom);
-      context.closePath();
-
-      context.stroke();
-      context.fill();
-    }
-
-    /**
-     * This function attempts to "fill in" missing functions from the canvas
-     * context object. Only two at the moment - measureText() nd fillText().
-     *
-     * @param object context The canvas 2D context
-     */
-    RGraph.OldBrowserCompat = function (context) {
-      if (!context) {
-        return;
-      }
-
-      if (!context.measureText) {
-
-        // This emulates the measureText() function
-        context.measureText = function (text) {
-          var textObj = document.createElement(
-            'DIV');
-          textObj.innerHTML = text;
-          textObj.style.position = 'absolute';
-          textObj.style.top = '-100px';
-          textObj.style.left = 0;
-          document.body.appendChild(textObj);
-
-          var width = {
-            width: textObj.offsetWidth
-          };
-
-          textObj.style.display = 'none';
-
-          return width;
-        }
-      }
-
-      if (!context.fillText) {
-        // This emulates the fillText() method
-        context.fillText = function (text,
-          targetX, targetY) {
-          return false;
-        }
-      }
-
-      // If IE8, add addEventListener()
-      if (!context.canvas.addEventListener) {
-        window.addEventListener = function (ev,
-          func, bubble) {
-          return this.attachEvent('on' + ev,
-            func);
-        }
-
-        context.canvas.addEventListener =
-          function (ev, func, bubble) {
-            return this.attachEvent('on' + ev,
-              func);
-          }
-      }
-    }
-
-    /**
-     * Draws a rectangle with curvy corners
-     *
-     * @param context object The context
-     * @param x       number The X coordinate (top left of the square)
-     * @param y       number The Y coordinate (top left of the square)
-     * @param w       number The width of the rectangle
-     * @param h       number The height of the rectangle
-     * @param         number The radius of the curved corners
-     * @param         boolean Whether the top left corner is curvy
-     * @param         boolean Whether the top right corner is curvy
-     * @param         boolean Whether the bottom right corner is curvy
-     * @param         boolean Whether the bottom left corner is curvy
-     */
-    RGraph.strokedCurvyRect = function (context,
-      x, y, w, h) {
-      // The corner radius
-      var r = arguments[5] ? arguments[5] : 3;
-
-      // The corners
-      var corner_tl = (arguments[6] ||
-        arguments[6] == null) ? true : false;
-      var corner_tr = (arguments[7] ||
-        arguments[7] == null) ? true : false;
-      var corner_br = (arguments[8] ||
-        arguments[8] == null) ? true : false;
-      var corner_bl = (arguments[9] ||
-        arguments[9] == null) ? true : false;
-
-      context.beginPath();
-
-      // Top left side
-      context.moveTo(x + (corner_tl ? r : 0), y);
-      context.lineTo(x + w - (corner_tr ? r : 0),
-        y);
-
-      // Top right corner
-      if (corner_tr) {
-        context.arc(x + w - r, y + r, r, PI +
-          HALFPI, TWOPI, false);
-      }
-
-      // Top right side
-      context.lineTo(x + w, y + h - (corner_br ?
-        r : 0));
-
-      // Bottom right corner
-      if (corner_br) {
-        context.arc(x + w - r, y - r + h, r,
-          TWOPI, HALFPI, false);
-      }
-
-      // Bottom right side
-      context.lineTo(x + (corner_bl ? r : 0), y +
-        h);
-
-      // Bottom left corner
-      if (corner_bl) {
-        context.arc(x + r, y - r + h, r, HALFPI,
-          PI, false);
-      }
-
-      // Bottom left side
-      context.lineTo(x, y + (corner_tl ? r : 0));
-
-      // Top left corner
-      if (corner_tl) {
-        context.arc(x + r, y + r, r, PI, PI +
-          HALFPI, false);
-      }
-
-      context.stroke();
-    }
-
-    /**
-     * Draws a filled rectangle with curvy corners
-     *
-     * @param context object The context
-     * @param x       number The X coordinate (top left of the square)
-     * @param y       number The Y coordinate (top left of the square)
-     * @param w       number The width of the rectangle
-     * @param h       number The height of the rectangle
-     * @param         number The radius of the curved corners
-     * @param         boolean Whether the top left corner is curvy
-     * @param         boolean Whether the top right corner is curvy
-     * @param         boolean Whether the bottom right corner is curvy
-     * @param         boolean Whether the bottom left corner is curvy
-     */
-    RGraph.filledCurvyRect = function (context, x,
-      y, w, h) {
-      // The corner radius
-      var r = arguments[5] ? arguments[5] : 3;
-
-      // The corners
-      var corner_tl = (arguments[6] ||
-        arguments[6] == null) ? true : false;
-      var corner_tr = (arguments[7] ||
-        arguments[7] == null) ? true : false;
-      var corner_br = (arguments[8] ||
-        arguments[8] == null) ? true : false;
-      var corner_bl = (arguments[9] ||
-        arguments[9] == null) ? true : false;
-
-      context.beginPath();
-
-      // First draw the corners
-
-      // Top left corner
-      if (corner_tl) {
-        context.moveTo(x + r, y + r);
-        context.arc(x + r, y + r, r, PI, PI +
-          HALFPI, false);
-      } else {
-        context.fillRect(x, y, r, r);
-      }
-
-      // Top right corner
-      if (corner_tr) {
-        context.moveTo(x + w - r, y + r);
-        context.arc(x + w - r, y + r, r, PI +
-          HALFPI, 0, false);
-      } else {
-        context.moveTo(x + w - r, y);
-        context.fillRect(x + w - r, y, r, r);
-      }
-
-      // Bottom right corner
-      if (corner_br) {
-        context.moveTo(x + w - r, y + h - r);
-        context.arc(x + w - r, y - r + h, r, 0,
-          HALFPI, false);
-      } else {
-        context.moveTo(x + w - r, y + h - r);
-        context.fillRect(x + w - r, y + h - r,
-          r, r);
-      }
-
-      // Bottom left corner
-      if (corner_bl) {
-        context.moveTo(x + r, y + h - r);
-        context.arc(x + r, y - r + h, r, HALFPI,
-          PI, false);
-      } else {
-        context.moveTo(x, y + h - r);
-        context.fillRect(x, y + h - r, r, r);
-      }
-
-      // Now fill it in
-      context.fillRect(x + r, y, w - r - r, h);
-      context.fillRect(x, y + r, r + 1, h - r -
-        r);
-      context.fillRect(x + w - r - 1, y + r, r +
-        1, h - r - r);
-
-      context.fill();
-    }
-
-    /**
-     * Hides the zoomed canvas
-     */
-    RGraph.HideZoomedCanvas = function () {
-      var interval = 15;
-      var frames = 10;
-
-      if (typeof (__zoomedimage__) == 'object') {
-        obj = __zoomedimage__.obj;
-      } else {
-        return;
-      }
-
-      if (obj.Get('chart.zoom.fade.out')) {
-        for (var i = frames, j = 1; i >= 0; --i, ++
-          j) {
-          if (typeof (__zoomedimage__) ==
-            'object') {
-            setTimeout(
-              "__zoomedimage__.style.opacity = " +
-              String(i / 10), j * interval);
-          }
-        }
-
-        if (typeof (__zoomedbackground__) ==
-          'object') {
-          setTimeout(
-            "__zoomedbackground__.style.opacity = " +
-            String(i / frames), j * interval);
-        }
-      }
-
-      if (typeof (__zoomedimage__) == 'object') {
-        setTimeout(
-          "__zoomedimage__.style.display = 'none'",
-          obj.Get('chart.zoom.fade.out') ? (
-            frames * interval) + 10 : 0);
-      }
-
-      if (typeof (__zoomedbackground__) ==
-        'object') {
-        setTimeout(
-          "__zoomedbackground__.style.display = 'none'",
-          obj.Get('chart.zoom.fade.out') ? (
-            frames * interval) + 10 : 0);
-      }
-    }
-
-    /**
-     * Adds an event handler
-     *
-     * @param object obj   The graph object
-     * @param string event The name of the event, eg ontooltip
-     * @param object func  The callback function
-     */
-    RGraph.AddCustomEventListener = function (obj,
-      name, func) {
-      if (typeof (RGraph.events[obj.uid]) ==
-        'undefined') {
-        RGraph.events[obj.uid] = [];
-      }
-
-      RGraph.events[obj.uid].push([obj, name,
-        func
-      ]);
-
-      return RGraph.events[obj.uid].length - 1;
-    }
-
-    /**
-     * Used to fire one of the RGraph custom events
-     *
-     * @param object obj   The graph object that fires the event
-     * @param string event The name of the event to fire
-     */
-    RGraph.FireCustomEvent = function (obj, name) {
-      if (obj && obj.isRGraph) {
-
-        // New style of adding custom events
-        if (obj[name]) {
-          (obj[name])(obj);
-        }
-
-        var uid = obj.uid;
-
-        if (typeof (uid) == 'string' && typeof (
-            RGraph.events) == 'object' &&
-          typeof (RGraph.events[uid]) ==
-          'object' && RGraph.events[uid].length >
-          0) {
-
-          for (var j = 0; j < RGraph.events[uid]
-            .length; ++j) {
-            if (RGraph.events[uid][j] && RGraph
-              .events[uid][j][1] == name) {
-              RGraph.events[uid][j][2](obj);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * If you prefer, you can use the SetConfig() method to set the configuration information
-     * for your chart. You may find that setting the configuration this way eases reuse.
-     *
-     * @param object obj    The graph object
-     * @param object config The graph configuration information
-     */
-    RGraph.SetConfig = function (obj, c) {
-      for (i in c) {
-        if (typeof (i) == 'string') {
-          obj.Set(i, c[i]);
-        }
-      }
-
-      return obj;
-    }
-
-    /**
-     * Clears all the custom event listeners that have been registered
-     *
-     * @param    string Limits the clearing to this object ID
-     */
-    RGraph.RemoveAllCustomEventListeners =
-      function () {
-        var id = arguments[0];
-
-        if (id && RGraph.events[id]) {
-          RGraph.events[id] = [];
-        } else {
-          RGraph.events = [];
-        }
-      }
-
-    /**
-     * Clears a particular custom event listener
-     *
-     * @param object obj The graph object
-     * @param number i   This is the index that is return by .AddCustomEventListener()
-     */
-    RGraph.RemoveCustomEventListener = function (
-      obj, i) {
-      if (typeof (RGraph.events) == 'object' &&
-        typeof (RGraph.events[obj.id]) ==
-        'object' && typeof (RGraph.events[obj.id]
-          [i]) == 'object') {
-
-        RGraph.events[obj.id][i] = null;
-      }
-    }
-
-    /**
-     * This draws the background
-     *
-     * @param object obj The graph object
-     */
-    RGraph.DrawBackgroundImage = function (obj) {
-      if (typeof (obj.Get(
-          'chart.background.image')) ==
-        'string') {
-        if (typeof (obj.canvas.__rgraph_background_image__) ==
-          'undefined') {
-          var img = new Image();
-          img.__object__ = obj;
-          img.__canvas__ = obj.canvas;
-          img.__context__ = obj.context;
-          img.src = obj.Get(
-            'chart.background.image');
-
-          obj.canvas.__rgraph_background_image__ =
-            img;
-        } else {
-          img = obj.canvas.__rgraph_background_image__;
-        }
-
-        // When the image has loaded - redraw the canvas
-        img.onload = function () {
-          obj.__rgraph_background_image_loaded__ =
-            true;
-          RGraph.Clear(obj.canvas);
-          RGraph.RedrawCanvas(obj.canvas);
-        }
-
-        var gutterLeft = obj.Get(
-          'chart.gutter.left');
-        var gutterRight = obj.Get(
-          'chart.gutter.right');
-        var gutterTop = obj.Get(
-          'chart.gutter.top');
-        var gutterBottom = obj.Get(
-          'chart.gutter.bottom');
-        var stretch = obj.Get(
-          'chart.background.image.stretch');
-        var align = obj.Get(
-          'chart.background.image.align');
-
-        // Handle chart.background.image.align
-        if (typeof (align) == 'string') {
-          if (align.indexOf('right') != -1) {
-            var x = obj.canvas.width - img.width -
-              gutterRight;
-          } else {
-            var x = gutterLeft;
-          }
-
-          if (align.indexOf('bottom') != -1) {
-            var y = obj.canvas.height - img.height -
-              gutterBottom;
-          } else {
-            var y = gutterTop;
-          }
-        } else {
-          var x = gutterLeft;
-          var y = gutterTop;
-        }
-
-        // X/Y coords take precedence over the align
-        var x = typeof (obj.Get(
-            'chart.background.image.x')) ==
-          'number' ? obj.Get(
-            'chart.background.image.x') : x;
-        var y = typeof (obj.Get(
-            'chart.background.image.y')) ==
-          'number' ? obj.Get(
-            'chart.background.image.y') : y;
-        var w = stretch ? obj.canvas.width -
-          gutterLeft - gutterRight : img.width;
-        var h = stretch ? obj.canvas.height -
-          gutterTop - gutterBottom : img.height;
-
-        /**
-         * You can now specify the width and height of the image
-         */
-        if (typeof (obj.Get(
-            'chart.background.image.w')) ==
-          'number') w = obj.Get(
-          'chart.background.image.w');
-        if (typeof (obj.Get(
-            'chart.background.image.h')) ==
-          'number') h = obj.Get(
-          'chart.background.image.h');
-
-        obj.context.drawImage(img, x, y, w, h);
-      }
-    }
-
-    /**
-     * This function determines wshether an object has tooltips or not
-     *
-     * @param object obj The chart object
-     */
-    RGraph.hasTooltips = function (obj) {
-      if (typeof (obj.Get('chart.tooltips')) ==
-        'object' && obj.Get('chart.tooltips')) {
-        for (var i = 0; i < obj.Get(
-            'chart.tooltips').length; ++i) {
-          if (!RGraph.is_null(obj.Get(
-              'chart.tooltips')[i])) {
-            return true;
-          }
-        }
-      } else if (typeof (obj.Get(
-          'chart.tooltips')) == 'function') {
-        return true;
-      }
-
-      return false;
-    }
-
-    /**
-     * This function creates a (G)UID which can be used to identify objects.
-     *
-     * @return string (g)uid The (G)UID
-     */
-    RGraph.CreateUID = function () {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
-      .replace(
-        /[xy]/g,
-        function (c) {
-          var r = Math.random() * 16 | 0,
-            v = c == 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
-    }
-
-    /**
-     * This is the new object registry, used to facilitate multiple objects per canvas.
-     *
-     * @param object obj The object to register
-     */
-    RGraph.ObjectRegistry.Add = function (obj) {
-      var uid = obj.uid;
-      var canvasID = obj.canvas.id;
-
-      /**
-       * Index the objects by UID
-       */
-      RGraph.ObjectRegistry.objects.byUID.push(
-        [uid, obj]);
-
-      /**
-       * Index the objects by the canvas that they're drawn on
-       */
-      RGraph.ObjectRegistry.objects.byCanvasID.push(
-        [canvasID, obj]);
-    }
-
-    /**
-     * Remove an object from the object registry
-     *
-     * @param object obj The object to remove.
-     */
-    RGraph.ObjectRegistry.Remove = function (obj) {
-      var id = obj.id;
-      var uid = obj.uid;
-
-      for (var i = 0; i < RGraph.ObjectRegistry
-        .objects.byUID.length; ++i) {
-        if (RGraph.ObjectRegistry.objects.byUID[
-            i] && RGraph.ObjectRegistry.objects
-          .byUID[i][1].uid == uid) {
-          RGraph.ObjectRegistry.objects.byUID[i] =
-            null;
-        }
-      }
-
-      for (var i = 0; i < RGraph.ObjectRegistry
-        .objects.byCanvasID.length; ++i) {
-        if (RGraph.ObjectRegistry.objects.byCanvasID[
-            i] && RGraph.ObjectRegistry.objects
-          .byCanvasID[i][1] && RGraph.ObjectRegistry
-          .objects.byCanvasID[i][1].uid == uid) {
-
-          RGraph.ObjectRegistry.objects.byCanvasID[
-            i] = null;
-        }
-      }
-
-    }
-
-    /**
-     * Removes all objects from the ObjectRegistry. If either the ID of a canvas is supplied,
-     * or the canvas itself, then only objects pertaining to that canvas are cleared.
-     *
-     * @param mixed   Either a canvas object (as returned by document.getElementById()
-     *                or the ID of a canvas (ie a string)
-     */
-    RGraph.ObjectRegistry.Clear = function () {
-      // If an ID is supplied restrict the learing to that
-      if (arguments[0]) {
-
-        var id = (typeof (arguments[0]) ==
-          'object' ? arguments[0].id :
-          arguments[0]);
-        var objects = RGraph.ObjectRegistry.getObjectsByCanvasID(
-          id);
-
-        for (var i = 0; i < objects.length; ++i) {
-          RGraph.ObjectRegistry.Remove(objects[
-            i]);
-        }
-
-      } else {
-
-        RGraph.ObjectRegistry.objects = {};
-        RGraph.ObjectRegistry.objects.byUID = [];
-        RGraph.ObjectRegistry.objects.byCanvasID = [];
-      }
-    }
-
-    /**
-     * Lists all objects in the ObjectRegistry
-     *
-     * @param boolean ret Whether to return the list or alert() it
-     */
-    RGraph.ObjectRegistry.List = function () {
-      var list = [];
-
-      for (var i = 0; i < RGraph.ObjectRegistry
-        .objects.byUID.length; ++i) {
-        if (RGraph.ObjectRegistry.objects.byUID[
-            i]) {
-          list.push(RGraph.ObjectRegistry.objects
-            .byUID[i][1].type);
-        }
-      }
-
-      if (arguments[0]) {
-        return list;
-      } else {
-        p(list);
-      }
-    }
-
-    /**
-     * Clears the ObjectRegistry of objects that are of a certain given type
-     *
-     * @param type string The type to clear
-     */
-    RGraph.ObjectRegistry.ClearByType = function (
-      type) {
-      var objects = RGraph.ObjectRegistry.objects
-        .byUID;
-
-      for (var i = 0; i < objects.length; ++i) {
-        if (objects[i]) {
-          var uid = objects[i][0];
-          var obj = objects[i][1];
-
-          if (obj && obj.type == type) {
-            RGraph.ObjectRegistry.Remove(obj);
-          }
-        }
-      }
-    }
-
-    /**
-     * This function provides an easy way to go through all of the objects that are held in the
-     * Registry
-     *
-     * @param func function This function is run for every object. Its passed the object as an argument
-     * @param string type Optionally, you can pass a type of object to look for
-     */
-    RGraph.ObjectRegistry.Iterate = function (
-      func) {
-      var objects = RGraph.ObjectRegistry.objects
-        .byUID;
-
-      for (var i = 0; i < objects.length; ++i) {
-
-        if (typeof arguments[1] == 'string') {
-
-          var types = arguments[1].split(/,/);
-
-          for (var j = 0; j < types.length; ++j) {
-            if (types[j] == objects[i][1].type) {
-              func(objects[i][1]);
-            }
-          }
-        } else {
-          func(objects[i][1]);
-        }
-      }
-    }
-
-    /**
-     * Retrieves all objects for a given canvas id
-     *
-     * @patarm id string The canvas ID to get objects for.
-     */
-    RGraph.ObjectRegistry.getObjectsByCanvasID =
-      function (id) {
-        var store = RGraph.ObjectRegistry.objects
-          .byCanvasID;
-        var ret = [];
-
-        // Loop through all of the objects and return the appropriate ones
-        for (var i = 0; i < store.length; ++i) {
-          if (store[i] && store[i][0] == id) {
-            ret.push(store[i][1]);
-          }
-        }
-
-        return ret;
-      }
-
-    /**
-     * Retrieves the relevant object based on the X/Y position.
-     *
-     * @param  object e The event object
-     * @return object   The applicable (if any) object
-     */
-    RGraph.ObjectRegistry.getFirstObjectByXY =
-      RGraph.ObjectRegistry.getObjectByXY =
-      function (e) {
-        var canvas = e.target;
-        var ret = null;
-        var objects = RGraph.ObjectRegistry.getObjectsByCanvasID(
-          canvas.id);
-
-        for (var i = (objects.length - 1); i >= 0; --
-          i) {
-
-          var obj = objects[i].getObjectByXY(e);
-
-          if (obj) {
-            return obj;
-          }
-        }
-      }
-
-    /**
-     * Retrieves the relevant objects based on the X/Y position.
-     * NOTE This function returns an array of objects
-     *
-     * @param  object e The event object
-     * @return          An array of pertinent objects. Note the there may be only one object
-     */
-    RGraph.ObjectRegistry.getObjectsByXY =
-      function (e) {
-        var canvas = e.target;
-        var ret = [];
-        var objects = RGraph.ObjectRegistry.getObjectsByCanvasID(
-          canvas.id);
-
-        // Retrieve objects "front to back"
-        for (var i = (objects.length - 1); i >= 0; --
-          i) {
-
-          var obj = objects[i].getObjectByXY(e);
-
-          if (obj) {
-            ret.push(obj);
-          }
-        }
-
-        return ret;
-      }
-
-    /**
-     * Retrieves the object with the corresponding UID
-     *
-     * @param string uid The UID to get the relevant object for
-     */
-    RGraph.ObjectRegistry.getObjectByUID =
-      function (uid) {
-        var objects = RGraph.ObjectRegistry.objects
-          .byUID;
-
-        for (var i = 0; i < objects.length; ++i) {
-          if (objects[i] && objects[i][1].uid ==
-            uid) {
-            return objects[i][1];
-          }
-        }
-      }
-
-    /**
-     * Retrieves the objects that are the given type
-     *
-     * @param  mixed canvas  The canvas to check. It can either be the canvas object itself or just the ID
-     * @param  string type   The type to look for
-     * @return array         An array of one or more objects
-     */
-    RGraph.ObjectRegistry.getObjectsByType =
-      function (type) {
-        var objects = RGraph.ObjectRegistry.objects
-          .byUID;
-        var ret = [];
-
-        for (var i = 0; i < objects.length; ++i) {
-
-          if (objects[i] && objects[i][1] &&
-            objects[i][1].type && objects[i][1].type &&
-            objects[i][1].type == type) {
-            ret.push(objects[i][1]);
-          }
-        }
-
-        return ret;
-      }
-
-    /**
-     * Retrieves the FIRST object that matches the given type
-     *
-     * @param  string type   The type of object to look for
-     * @return object        The FIRST object that matches the given type
-     */
-    RGraph.ObjectRegistry.getFirstObjectByType =
-      function (type) {
-        var objects = RGraph.ObjectRegistry.objects
-          .byUID;
-
-        for (var i = 0; i < objects.length; ++i) {
-          if (objects[i] && objects[i][1] &&
-            objects[i][1].type == type) {
-            return objects[i][1];
-          }
-        }
-
-        return null;
-      }
-
-    /**
-     * This takes centerx, centery, x and y coordinates and returns the
-     * appropriate angle relative to the canvas angle system. Remember
-     * that the canvas angle system starts at the EAST axis
-     *
-     * @param  number cx  The centerx coordinate
-     * @param  number cy  The centery coordinate
-     * @param  number x   The X coordinate (eg the mouseX if coming from a click)
-     * @param  number y   The Y coordinate (eg the mouseY if coming from a click)
-     * @return number     The relevant angle (measured in in RADIANS)
-     */
-    RGraph.getAngleByXY = function (cx, cy, x, y) {
-      var angle = Math.atan((y - cy) / (x - cx));
-      angle = Math.abs(angle)
-
-      if (x >= cx && y >= cy) {
-        angle += TWOPI;
-
-      } else if (x >= cx && y < cy) {
-        angle = (HALFPI - angle) + (PI + HALFPI);
-
-      } else if (x < cx && y < cy) {
-        angle += PI;
-
-      } else {
-        angle = PI - angle;
-      }
-
-      /**
-       * Upper and lower limit checking
-       */
-      if (angle > TWOPI) {
-        angle -= TWOPI;
-      }
-
-      return angle;
-    }
-
-    /**
-     * This function returns the distance between two points. In effect the
-     * radius of an imaginary circle that is centered on x1 and y1. The name
-     * of this function is derived from the word "Hypoteneuse", which in
-     * trigonmetry is the longest side of a triangle
-     *
-     * @param number x1 The original X coordinate
-     * @param number y1 The original Y coordinate
-     * @param number x2 The target X coordinate
-     * @param number y2 The target Y  coordinate
-     */
-    RGraph.getHypLength = function (x1, y1, x2,
-      y2) {
-      var ret = Math.sqrt(((x2 - x1) * (x2 - x1)) +
-        ((y2 - y1) * (y2 - y1)));
-
-      return ret;
-    }
-
-    /**
-     * This function gets the end point (X/Y coordinates) of a given radius.
-     * You pass it the center X/Y and the radius and this function will return
-     * the endpoint X/Y coordinates.
-     *
-     * @param number cx The center X coord
-     * @param number cy The center Y coord
-     * @param number r  The lrngth of the radius
-     */
-    RGraph.getRadiusEndPoint = function (cx, cy,
-      angle, radius) {
-      var x = cx + (Math.cos(angle) * radius);
-      var y = cy + (Math.sin(angle) * radius);
-
-      return [x, y];
-    }
-
-    /**
-     * This installs all of the event listeners
-     *
-     * @param object obj The chart object
-     */
-    RGraph.InstallEventListeners = function (obj) {
-      /**
-       * Don't attempt to install event listeners for older versions of MSIE
-       */
-      if (RGraph.isOld()) {
-        return;
-      }
-
-      /**
-       * If this function exists, then the dynamic file has been included.
-       */
-      if (RGraph.InstallCanvasClickListener) {
-
-        RGraph.InstallWindowMousedownListener(
-          obj);
-        RGraph.InstallWindowMouseupListener(obj);
-        RGraph.InstallCanvasMousemoveListener(
-          obj);
-        RGraph.InstallCanvasMouseupListener(obj);
-        RGraph.InstallCanvasMousedownListener(
-          obj);
-        RGraph.InstallCanvasClickListener(obj);
-
-      } else if (RGraph.hasTooltips(obj) || obj
-        .Get('chart.adjustable') || obj.Get(
-          'chart.annotatable') || obj.Get(
-          'chart.contextmenu') || obj.Get(
-          'chart.resizable') || obj.Get(
-          'chart.key.interactive') || obj.Get(
-          'chart.events.click') || obj.Get(
-          'chart.events.mousemove') || typeof obj
-        .onclick == 'function' || typeof obj.onmousemove ==
-        'function'
-      ) {
-
-        alert(
-          '[RGRAPH] You appear to have used dynamic features but not included the file: RGraph.common.dynamic.js'
-        );
-      }
-    }
-
-    /**
-     * Loosly mimicks the PHP function print_r();
-     */
-    RGraph.pr = function (obj) {
-
-      var indent = (arguments[2] ? arguments[2] :
-        '    ');
-      var str = '';
-
-      var counter = typeof arguments[3] ==
-        'number' ? arguments[3] : 0;
-
-      if (counter >= 5) {
-        return '';
-      }
-
-      switch (typeof obj) {
-
-      case 'string':
-        str += obj + ' (' + (typeof obj) + ', ' +
-          obj.length + ')';
-        break;
-      case 'number':
-        str += obj + ' (' + (typeof obj) + ')';
-        break;
-      case 'boolean':
-        str += obj + ' (' + (typeof obj) + ')';
-        break;
-      case 'function':
-        str += 'function () {}';
-        break;
-      case 'undefined':
-        str += 'undefined';
-        break;
-      case 'null':
-        str += 'null';
-        break;
-
-      case 'object':
-        // In case of null
-        if (RGraph.is_null(obj)) {
-          str += indent + 'null\n';
-        } else {
-          str += indent + 'Object {' + '\n'
-          for (j in obj) {
-            str += indent + '    ' + j + ' => ' +
-              RGraph.pr(obj[j], true, indent +
-                '    ', counter + 1) + '\n';
-          }
-          str += indent + '}';
-        }
-        break;
-
-      default:
-        str += 'Unknown type: ' + typeof obj +
-          '';
-        break;
-      }
-
-      /**
-       * Finished, now either return if we're in a recursed call, or alert()
-       * if we're not.
-       */
-      if (!arguments[1]) {
-        alert(str);
-      }
-
-      return str;
-    }
-
-    /**
-     * Produces a dashed line
-     *
-     * @param
-     */
-    RGraph.DashedLine = function (context, x1, y1,
-      x2, y2) {
-      /**
-       * This is the size of the dashes
-       */
-      var size = 5;
-
-      /**
-       * The optional fifth argument can be the size of the dashes
-       */
-      if (typeof (arguments[5]) == 'number') {
-        size = arguments[5];
-      }
-
-      var dx = x2 - x1;
-      var dy = y2 - y1;
-      var num = Math.floor(Math.sqrt((dx * dx) +
-        (dy * dy)) / size);
-
-      var xLen = dx / num;
-      var yLen = dy / num;
-
-      var count = 0;
-
-      do {
-        (count % 2 == 0 && count > 0) ? context
-          .lineTo(x1, y1): context.moveTo(x1,
-            y1);
-
-        x1 += xLen;
-        y1 += yLen;
-      } while (count++ <= num);
-    }
-
-    /**
-     * Makes an AJAX call. It calls the given callback (a function) when ready
-     *
-     * @param string   url      The URL to retrieve
-     * @param function callback A function that is called when the response is ready, there's an example below
-     *                          called "myCallback".
-     */
-    RGraph.AJAX = function (url, callback) {
-      // Mozilla, Safari, ...
-      if (window.XMLHttpRequest) {
-        var httpRequest = new XMLHttpRequest();
-
-        // MSIE
-      } else if (window.ActiveXObject) {
-        var httpRequest = new ActiveXObject(
-          "Microsoft.XMLHTTP");
-      }
-
-      httpRequest.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status ==
-          200) {
-          this.__user_callback__ = callback;
-          this.__user_callback__();
-        }
-      }
-
-      httpRequest.open('GET', url, true);
-      httpRequest.send();
-    }
-
-    /**
-     * Rotates the canvas
-     *
-     * @param object canvas The canvas to rotate
-     * @param  int   x      The X coordinate about which to rotate the canvas
-     * @param  int   y      The Y coordinate about which to rotate the canvas
-     * @param  int   angle  The angle(in RADIANS) to rotate the canvas by
-     */
-    RGraph.RotateCanvas = function (canvas, x, y,
-      angle) {
-      var context = canvas.getContext('2d');
-
-      context.translate(x, y);
-      context.rotate(angle);
-      context.translate(0 - x, 0 - y);
-    }
-
-    /**
-     * Measures text by creating a DIV in the document and adding the relevant text to it.
-     * Then checking the .offsetWidth and .offsetHeight.
-     *
-     * @param  string text   The text to measure
-     * @param  bool   bold   Whether the text is bold or not
-     * @param  string font   The font to use
-     * @param  size   number The size of the text (in pts)
-     * @return array         A two element array of the width and height of the text
-     */
-    RGraph.MeasureText = function (text, bold,
-      font, size) {
-      // Add the sizes to the cache as adding DOM elements is costly and causes slow downs
-      if (typeof (__rgraph_measuretext_cache__) ==
-        'undefined') {
-        __rgraph_measuretext_cache__ = [];
-      }
-
-      var str = text + ':' + bold + ':' + font +
-        ':' + size;
-      if (typeof (__rgraph_measuretext_cache__) ==
-        'object' &&
-        __rgraph_measuretext_cache__[str]) {
-        return __rgraph_measuretext_cache__[str];
-      }
-
-      if (!__rgraph_measuretext_cache__[
-          'text-div']) {
-        var div = document.createElement('DIV');
-        div.style.position = 'absolute';
-        div.style.top = '-100px';
-        div.style.left = '-100px';
-        document.body.appendChild(div);
-
-        // Now store the newly created DIV
-        __rgraph_measuretext_cache__['text-div'] =
-          div;
-
-      } else if (__rgraph_measuretext_cache__[
-          'text-div']) {
-        var div = __rgraph_measuretext_cache__[
-          'text-div'];
-      }
-
-      div.innerHTML = text.replace(/\r\n/g,
-        '<br />');
-      div.style.fontFamily = font;
-      div.style.fontWeight = bold ? 'bold' :
-        'normal';
-      div.style.fontSize = size + 'pt';
-
-      var size = [div.offsetWidth, div.offsetHeight];
-
-      //document.body.removeChild(div);
-      __rgraph_measuretext_cache__[str] = size;
-
-      return size;
-    }
-
-    /* New text function. Accepts two arguments:
-     *  o obj - The chart object
-     *  o opt - An object/hash/map of properties. This can consist of:
-     *          x                The X coordinate (REQUIRED)
-     *          y                The Y coordinate (REQUIRED)
-     *          text             The text to show (REQUIRED)
-     *          font             The font to use
-     *          size             The size of the text (in pt)
-     *          bold             Whether the text shouldd be bold or not
-     *          marker           Whether to show a marker that indicates the X/Y coordinates
-     *          valign           The vertical alignment
-     *          halign           The horizontal alignment
-     *          bounding         Whether to draw a bounding box for the text
-     *          boundingStroke   The strokeStyle of the bounding box
-     *          boundingFill     The fillStyle of the bounding box
-     */
-    RGraph.Text2 = function (obj, opt) {
-      /**
-       * An RGraph object can be given, or a string or the 2D rendering context
-       * The coords are placed on the obj.coordsText variable ONLY if it's an RGraph object. The function
-       * still returns the cooords though in all cases.
-       */
-      if (obj && obj.isRGraph) {
-        var co = obj.context;
-        var ca = obj.canvas;
-      } else if (typeof obj == 'string') {
-        var ca = document.getElementById(obj);
-        var co = ca.getContext('2d');
-      } else if (typeof obj.getContext ==
-        'function') {
-        var ca = obj;
-        var co = ca.getContext('2d');
-      } else if (obj.toString().indexOf(
-          'CanvasRenderingContext2D') != -1) {
-        var co = obj;
-        var ca = obj.context;
-      }
-
-      var x = opt.x;
-      var y = opt.y;
-      var originalX = x;
-      var originalY = y;
-      var text = opt.text;
-      var text_multiline = text.split(/\r?\n/g);
-      var numlines = text_multiline.length;
-      var font = opt.font ? opt.font : 'Arial';
-      var size = opt.size ? opt.size : 10;
-      var size_pixels = size * 1.5;
-      var bold = opt.bold;
-      var halign = opt.halign ? opt.halign :
-        'left';
-      var valign = opt.valign ? opt.valign :
-        'bottom';
-      var tag = typeof opt.tag == 'string' &&
-        opt.tag.length > 0 ? opt.tag : '';
-      var marker = opt.marker;
-      var angle = opt.angle || 0;
-
-      /**
-       * Changed the name of boundingFill/boundingStroke - this allows you to still use those names
-       */
-      if (typeof opt.boundingFill == 'string')
-        opt['bounding.fill'] = opt.boundingFill;
-      if (typeof opt.boundingStroke == 'string')
-        opt['bounding.stroke'] = opt.boundingStroke;
-
-      var bounding = opt.bounding;
-      var bounding_stroke = opt[
-        'bounding.stroke'] ? opt[
-        'bounding.stroke'] : 'black';
-      var bounding_fill = opt['bounding.fill'] ?
-        opt['bounding.fill'] :
-        'rgba(255,255,255,0.7)';
-      var bounding_shadow = opt[
-        'bounding.shadow'];
-      var bounding_shadow_color = opt[
-        'bounding.shadow.color'] || '#ccc';
-      var bounding_shadow_blur = opt[
-        'bounding.shadow.blur'] || 3;
-      var bounding_shadow_offsetx = opt[
-        'bounding.shadow.offsetx'] || 3;
-      var bounding_shadow_offsety = opt[
-        'bounding.shadow.offsety'] || 3;
-      var bounding_linewidth = opt[
-        'bounding.linewidth'] || 1;
-
-      /**
-       * Initialize the return value to an empty object
-       */
-      var ret = {};
-
-      /**
-       * The text arg must be a string or a number
-       */
-      if (typeof text == 'number') {
-        text = String(text);
-      }
-
-      if (typeof text != 'string') {
-        alert(
-          '[RGRAPH TEXT] The text given must a string or a number'
-        );
-        return;
-      }
-
-      /**
-       * This facilitates vertical text
-       */
-      if (angle != 0) {
-        co.save();
-        co.translate(x, y);
-        co.rotate((Math.PI / 180) * angle)
-        x = 0;
-        y = 0;
-      }
-
-      /**
-       * Set the font
-       */
-      co.font = (opt.bold ? 'bold ' : '') +
-        size + 'pt ' + font;
-
-      /**
-       * Measure the width/height. This must be done AFTER the font has been set
-       */
-      var width = 0;
-      for (var i = 0; i < numlines; ++i) {
-        width = Math.max(width, co.measureText(
-          text_multiline[i]).width);
-      }
-      var height = size_pixels * numlines;
-
-      /**
-       * Accommodate old MSIE 7/8
-       */
-      if (document.all && ISOLD) {
-        //y += 2;
-      }
-
-      /**
-       * If marker is specified draw a marker at the X/Y coordinates
-       */
-      if (opt.marker) {
-        var marker_size = 10;
-        var strokestyle = co.strokeStyle;
-        obj.context.beginPath();
-        co.strokeStyle = 'red';
-        co.moveTo(x, y - marker_size);
-        co.lineTo(x, y + marker_size);
-        co.moveTo(x - marker_size, y);
-        co.lineTo(x + marker_size, y);
-        co.stroke();
-        co.strokeStyle = strokestyle;
-      }
-
-      /**
-       * Set the horizontal alignment
-       */
-      if (halign == 'center') {
-        co.textAlign = 'center';
-        var boundingX = x - 2 - (width / 2);
-      } else if (halign == 'right') {
-        co.textAlign = 'right';
-        var boundingX = x - 2 - width;
-      } else {
-        co.textAlign = 'left';
-        var boundingX = x - 2;
-      }
-
-      /**
-       * Set the vertical alignment
-       */
-      if (valign == 'center') {
-
-        co.textBaseline = 'middle';
-        // Move the text slightly
-        y -= 1;
-
-        y -= ((numlines - 1) / 2) * size_pixels;
-        var boundingY = y - (size_pixels / 2) -
-          2;
-
-      } else if (valign == 'top') {
-        co.textBaseline = 'top';
-
-        var boundingY = y - 2;
-
-      } else {
-
-        co.textBaseline = 'bottom';
-
-        // Move the Y coord if multiline text
-        if (numlines > 1) {
-          y -= ((numlines - 1) * size_pixels);
-        }
-
-        var boundingY = y - size_pixels - 2;
-      }
-
-      var boundingW = width + 4;
-      var boundingH = height + 4;
-
-      /**
-       * Draw a bounding box if required
-       */
-      if (bounding) {
-
-        var pre_bounding_linewidth = co.lineWidth;
-        var pre_bounding_strokestyle = co.strokeStyle;
-        var pre_bounding_fillstyle = co.fillStyle;
-        var pre_bounding_shadowcolor = co.shadowColor;
-        var pre_bounding_shadowblur = co.shadowBlur;
-        var pre_bounding_shadowoffsetx = co.shadowOffsetX;
-        var pre_bounding_shadowoffsety = co.shadowOffsetY;
-
-        co.lineWidth = bounding_linewidth;
-        co.strokeStyle = bounding_stroke;
-        co.fillStyle = bounding_fill;
-
-        if (bounding_shadow) {
-          co.shadowColor =
-            bounding_shadow_color;
-          co.shadowBlur = bounding_shadow_blur;
-          co.shadowOffsetX =
-            bounding_shadow_offsetx;
-          co.shadowOffsetY =
-            bounding_shadow_offsety;
-        }
-
-        //obj.context.strokeRect(boundingX, boundingY, width + 6, (size_pixels * numlines) + 4);
-        //obj.context.fillRect(boundingX, boundingY, width + 6, (size_pixels * numlines) + 4);
-        co.strokeRect(boundingX, boundingY,
-          boundingW, boundingH);
-        co.fillRect(boundingX, boundingY,
-          boundingW, boundingH);
-
-        // Reset the linewidth,colors and shadow to it's original setting
-        co.lineWidth = pre_bounding_linewidth;
-        co.strokeStyle =
-          pre_bounding_strokestyle;
-        co.fillStyle = pre_bounding_fillstyle;
-        co.shadowColor =
-          pre_bounding_shadowcolor
-        co.shadowBlur = pre_bounding_shadowblur
-        co.shadowOffsetX =
-          pre_bounding_shadowoffsetx
-        co.shadowOffsetY =
-          pre_bounding_shadowoffsety
-      }
-
-      /**
-       * Draw the text
-       */
-      if (numlines > 1) {
-        for (var i = 0; i < numlines; ++i) {
-          co.fillText(text_multiline[i], x, y +
-            (size_pixels * i));
-        }
-      } else {
-        co.fillText(text, x, y);
-      }
-
-      /**
-       * If the text is at 90 degrees restore() the canvas - getting rid of the rotation
-       * and the translate that we did
-       */
-      if (angle != 0) {
-        if (angle == 90) {
-          if (halign == 'left') {
-            if (valign == 'bottom') {
-              boundingX = originalX - 2;
-              boundingY = originalY - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (height /
-                2) - 2;
-              boundingY = originalY - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - height -
-                2;
-              boundingY = originalY - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-
-          } else if (halign == 'center') {
-            if (valign == 'bottom') {
-              boundingX = originalX - 2;
-              boundingY = originalY - (width /
-                2) - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (height /
-                2) - 2;
-              boundingY = originalY - (width /
-                2) - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - height -
-                2;
-              boundingY = originalY - (width /
-                2) - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-
-          } else if (halign == 'right') {
-            if (valign == 'bottom') {
-              boundingX = originalX - 2;
-              boundingY = originalY - width - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (height /
-                2) - 2;
-              boundingY = originalY - width - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - height -
-                2;
-              boundingY = originalY - width - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-          }
-
-        } else if (angle == 180) {
-
-          if (halign == 'left') {
-            if (valign == 'bottom') {
-              boundingX = originalX - width - 2;
-              boundingY = originalY - 2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - width - 2;
-              boundingY = originalY - (height /
-                2) - 2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - width - 2;
-              boundingY = originalY - height -
-                2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-
-          } else if (halign == 'center') {
-            if (valign == 'bottom') {
-              boundingX = originalX - (width /
-                2) - 2;
-              boundingY = originalY - 2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (width /
-                2) - 2;
-              boundingY = originalY - (height /
-                2) - 2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - (width /
-                2) - 2;
-              boundingY = originalY - height -
-                2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-
-          } else if (halign == 'right') {
-            if (valign == 'bottom') {
-              boundingX = originalX - 2;
-              boundingY = originalY - 2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - 2;
-              boundingY = originalY - (height /
-                2) - 2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - 2;
-              boundingY = originalY - height -
-                2;
-              boundingW = width + 4;
-              boundingH = height + 4;
-            }
-          }
-
-        } else if (angle == 270) {
-
-          if (halign == 'left') {
-            if (valign == 'bottom') {
-              boundingX = originalX - height -
-                2;
-              boundingY = originalY - width - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (height /
-                2) - 4;
-              boundingY = originalY - width - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - 2;
-              boundingY = originalY - width - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-
-          } else if (halign == 'center') {
-            if (valign == 'bottom') {
-              boundingX = originalX - height -
-                2;
-              boundingY = originalY - (width /
-                2) - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (height /
-                2) - 4;
-              boundingY = originalY - (width /
-                2) - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - 2;
-              boundingY = originalY - (width /
-                2) - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-
-          } else if (halign == 'right') {
-            if (valign == 'bottom') {
-              boundingX = originalX - height -
-                2;
-              boundingY = originalY - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'center') {
-              boundingX = originalX - (height /
-                2) - 2;
-              boundingY = originalY - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-            if (valign == 'top') {
-              boundingX = originalX - 2;
-              boundingY = originalY - 2;
-              boundingW = height + 4;
-              boundingH = width + 4;
-            }
-          }
-        }
-
-        obj.context.restore();
-      }
-
-      /**
-       * Reset the text alignment so that text rendered
-       */
-      co.textBaseline = 'alphabetic';
-      co.textAlign = 'left';
-
-      /**
-       * Fill the ret variable with details of the text
-       */
-      ret.x = boundingX;
-      ret.y = boundingY;
-      ret.width = boundingW;
-      ret.height = boundingH
-      ret.object = obj;
-      ret.text = text;
-      ret.tag = tag;
-
-      /**
-       * Save and then return the details of the text (but oly
-       * if it's an RGraph object that was given)
-       */
-      if (obj && obj.isRGraph && obj.coordsText) {
-        obj.coordsText.push(ret);
-      }
-
-      return ret;
-    }
-
-    /**
-     * Takes a sequential index abd returns the group/index variation of it. Eg if you have a
-     * sequential index from a grouped bar chart this function can be used to convert that into
-     * an appropriate group/index combination
-     *
-     * @param nindex number The sequential index
-     * @param data   array  The original data (which is grouped)
-     * @return              The group/index information
-     */
-    RGraph.sequentialIndexToGrouped = function (
-      index, data) {
-      var group = 0;
-      var grouped_index = 0;
-
-      while (--index >= 0) {
-
-        // Allow for numbers as well as arrays in the dataset
-        if (typeof data[group] == 'number') {
-          group++
-          grouped_index = 0;
-          continue;
-        }
-
-        grouped_index++;
-
-        if (grouped_index >= data[group].length) {
-          group++;
-          grouped_index = 0;
-        }
-      }
-
-      return [group, grouped_index];
-    }
-
-    // Some other functions. Because they're rarely changed - they're hand minified
-    RGraph.LinearGradient = function (obj, x1, y1,
-      x2, y2, color1, color2) {
-      var gradient = obj.context.createLinearGradient(
-        x1, y1, x2, y2);
-      var numColors = arguments.length - 5;
-      for (var i = 5; i < arguments.length; ++i) {
-        var color = arguments[i];
-        var stop = (i - 5) / (numColors - 1);
-        gradient.addColorStop(stop, color);
-      }
-      return gradient;
-    }
-    RGraph.RadialGradient = function (obj, x1, y1,
-      r1, x2, y2, r2, color1, color2) {
-      var gradient = obj.context.createRadialGradient(
-        x1, y1, r1, x2, y2, r2);
-      var numColors = arguments.length - 7;
-      for (var i = 7; i < arguments.length; ++i) {
-        var color = arguments[i];
-        var stop = (i - 7) / (numColors - 1);
-        gradient.addColorStop(stop, color);
-      }
-      return gradient;
-    }
-    RGraph.array_shift = function (arr) {
-      var ret = [];
-      for (var i = 1; i < arr.length; ++i) {
-        ret.push(arr[i]);
-      }
-      return ret;
-    }
-    RGraph.AddEventListener = function (id, e,
-      func) {
-      var type = arguments[3] ? arguments[3] :
-        'unknown';
-      RGraph.Registry.Get(
-        'chart.event.handlers').push([id, e,
-        func, type
-      ]);
-    }
-    RGraph.ClearEventListeners = function (id) {
-      if (id && id == 'window') {
-        window.removeEventListener('mousedown',
-          window.__rgraph_mousedown_event_listener_installed__,
-          false);
-        window.removeEventListener('mouseup',
-          window.__rgraph_mouseup_event_listener_installed__,
-          false);
-      } else {
-        var canvas = document.getElementById(id);
-        canvas.removeEventListener('mouseup',
-          canvas.__rgraph_mouseup_event_listener_installed__,
-          false);
-        canvas.removeEventListener('mousemove',
-          canvas.__rgraph_mousemove_event_listener_installed__,
-          false);
-        canvas.removeEventListener('mousedown',
-          canvas.__rgraph_mousedown_event_listener_installed__,
-          false);
-        canvas.removeEventListener('click',
-          canvas.__rgraph_click_event_listener_installed__,
-          false);
-      }
-    }
-    RGraph.HidePalette = function () {
-      var div = RGraph.Registry.Get('palette');
-      if (typeof (div) == 'object' && div) {
-        div.style.visibility = 'hidden';
-        div.style.display = 'none';
-        RGraph.Registry.Set('palette', null);
-      }
-    }
-    RGraph.random = function (min, max) {
-      var dp = arguments[2] ? arguments[2] : 0;
-      var r = Math.random();
-      return Number((((max - min) * r) + min).toFixed(
-        dp));
-    }
-    RGraph.NoShadow = function (obj) {
-      obj.context.shadowColor = 'rgba(0,0,0,0)';
-      obj.context.shadowBlur = 0;
-      obj.context.shadowOffsetX = 0;
-      obj.context.shadowOffsetY = 0;
-    }
-    RGraph.SetShadow = function (obj, color,
-      offsetx, offsety, blur) {
-      obj.context.shadowColor = color;
-      obj.context.shadowOffsetX = offsetx;
-      obj.context.shadowOffsetY = offsety;
-      obj.context.shadowBlur = blur;
-    }
-    RGraph.array_reverse = function (arr) {
-      var newarr = [];
-      for (var i = arr.length - 1; i >= 0; i--) {
-        newarr.push(arr[i]);
-      }
-      return newarr;
-    }
-    RGraph.Registry.Set = function (name, value) {
-      RGraph.Registry.store[name] = value;
-      return value;
-    }
-    RGraph.Registry.Get = function (name) {
-      return RGraph.Registry.store[name];
-    }
-    RGraph.degrees2Radians = function (degrees) {
-      return degrees * (PI / 180);
-    }
-    RGraph.log = (function (n, base) {
-      var log = Math.log;
-      return function (n, base) {
-        return log(n) / (base ? log(base) :
-          1);
-      };
-    })();
-    RGraph.is_array = function (obj) {
-      return obj != null && obj.constructor.toString()
-        .indexOf('Array') != -1;
-    }
-    RGraph.trim = function (str) {
-      return RGraph.ltrim(RGraph.rtrim(str));
-    }
-    RGraph.ltrim = function (str) {
-      return str.replace(/^(\s|\0)+/, '');
-    }
-    RGraph.rtrim = function (str) {
-      return str.replace(/(\s|\0)+$/, '');
-    }
-    RGraph.GetHeight = function (obj) {
-      return obj.canvas.height;
-    }
-    RGraph.GetWidth = function (obj) {
-      return obj.canvas.width;
-    }
-    RGraph.is_null = function (arg) {
-      if (arg == null || (typeof (arg)) ==
-        'object' && !arg) {
-        return true;
-      }
-      return false;
-    }
-    RGraph.Timer = function (label) {
-      if (typeof (RGraph.TIMER_LAST_CHECKPOINT) ==
-        'undefined') {
-        RGraph.TIMER_LAST_CHECKPOINT = Date.now();
-      }
-      var now = Date.now();
-      console.log(label + ': ' + (now - RGraph.TIMER_LAST_CHECKPOINT)
-        .toString());
-      RGraph.TIMER_LAST_CHECKPOINT = now;
-    }
-    RGraph.Async = function (func) {
-      return setTimeout(func, arguments[1] ?
-        arguments[1] : 1);
-    }
-    RGraph.isIE = function () {
-      return navigator.userAgent.indexOf('MSIE') >
-        0;
-    };
-    ISIE = RGraph.isIE();
-    RGraph.isIE6 = function () {
-      return navigator.userAgent.indexOf(
-        'MSIE 6') > 0;
-    };
-    ISIE6 = RGraph.isIE6();
-    RGraph.isIE7 = function () {
-      return navigator.userAgent.indexOf(
-        'MSIE 7') > 0;
-    };
-    ISIE7 = RGraph.isIE7();
-    RGraph.isIE8 = function () {
-      return navigator.userAgent.indexOf(
-        'MSIE 8') > 0;
-    };
-    ISIE8 = RGraph.isIE8();
-    RGraph.isIE9 = function () {
-      return navigator.userAgent.indexOf(
-        'MSIE 9') > 0;
-    };
-    ISIE9 = RGraph.isIE9();
-    RGraph.isIE10 = function () {
-      return navigator.userAgent.indexOf(
-        'MSIE 10') > 0;
-    };
-    ISIE10 = RGraph.isIE10();
-    RGraph.isIE9up = function () {
-      navigator.userAgent.match(/MSIE (\d+)/);
-      return Number(RegExp.$1) >= 9;
-    };
-    ISIE9UP = RGraph.isIE9up();
-    RGraph.isIE10up = function () {
-      navigator.userAgent.match(/MSIE (\d+)/);
-      return Number(RegExp.$1) >= 10;
-    };
-    ISIE10UP = RGraph.isIE10up();
-    RGraph.isOld = function () {
-      return ISIE6 || ISIE7 || ISIE8;
-    };
-    ISOLD = RGraph.isOld();
-    RGraph.Reset = function (canvas) {
-      canvas.width = canvas.width;
-      RGraph.ObjectRegistry.Clear(canvas);
-      canvas.__rgraph_aa_translated__ = false;
-    }
-
-    function pd(variable) {
-      RGraph.pr(variable);
-    }
-
-    function p(variable) {
-      RGraph.pr(arguments[0], arguments[1],
-        arguments[3]);
-    }
-
-    function a(variable) {
-      alert(variable);
-    }
-
-    function cl(variable) {
-      return console.log(variable);
-    }
+window.RGraph=window.RGraph||{isrgraph:true,isRGraph:true,rgraph:true};(function(win,doc,undefined)
+{var ua=navigator.userAgent;RGraph.Highlight={};RGraph.Registry={};RGraph.Registry.store=[];RGraph.Registry.store['event.handlers']=[];RGraph.Registry.store['__rgraph_event_listeners__']=[];RGraph.Background={};RGraph.background={};RGraph.objects=[];RGraph.Resizing={};RGraph.events=[];RGraph.cursor=[];RGraph.Effects=RGraph.Effects||{};RGraph.cache=[];RGraph.QS=RGraph.GET={};RGraph.GET.__parts__=null;RGraph.ObjectRegistry={};RGraph.ObjectRegistry.objects={};RGraph.ObjectRegistry.objects.byUID=[];RGraph.ObjectRegistry.objects.byCanvasID=[];RGraph.OR=RGraph.ObjectRegistry;RGraph.PI=Math.PI;RGraph.HALFPI=RGraph.PI/2;RGraph.TWOPI=RGraph.PI*2;RGraph.ISFF=ua.indexOf('Firefox')!=-1;RGraph.ISOPERA=ua.indexOf('Opera')!=-1;RGraph.ISCHROME=ua.indexOf('Chrome')!=-1;RGraph.ISSAFARI=ua.indexOf('Safari')!=-1&&!RGraph.ISCHROME;RGraph.ISWEBKIT=ua.indexOf('WebKit')!=-1;RGraph.ISIE=ua.indexOf('Trident')>0||navigator.userAgent.indexOf('MSIE')>0;RGraph.ISIE6=ua.indexOf('MSIE 6')>0;RGraph.ISIE7=ua.indexOf('MSIE 7')>0;RGraph.ISIE8=ua.indexOf('MSIE 8')>0;RGraph.ISIE9=ua.indexOf('MSIE 9')>0;RGraph.ISIE10=ua.indexOf('MSIE 10')>0;RGraph.ISOLD=RGraph.ISIE6||RGraph.ISIE7||RGraph.ISIE8;RGraph.ISIE11UP=ua.indexOf('MSIE')==-1&&ua.indexOf('Trident')>0;RGraph.ISIE10UP=RGraph.ISIE10||RGraph.ISIE11UP;RGraph.ISIE9UP=RGraph.ISIE9||RGraph.ISIE10UP;RGraph.MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];RGraph.MONTHS_LONG=['January','February','March','April','May','June','July','August','September','October','November','December'];RGraph.DAYS_SHORT=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];RGraph.DAYS_LONG=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];RGraph.HOURS24=['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];RGraph.HOURS12=['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00'];RGraph.getArgs=function(args,names)
+{var ret={};var count=0;names=names.trim().split(/ *, */);if(args&&args[0]&&args.length===1&&typeof args[0][names[0]]!=='undefined'){for(var i=0;i<names.length;++i){if(typeof args[0][names[i]]==='undefined'){args[0][names[i]]=null;}}
+return args[0];}else{for(var i in names){ret[names[i]]=typeof args[count]==='undefined'?null:args[count];count+=1;}}
+return ret;};RGraph.getScale=function(args)
+{var properties=args.object.properties,numlabels=typeof args.options['scale.labels.count']=='number'?args.options['scale.labels.count']:5,units_pre=typeof args.options['scale.units.pre']=='string'?args.options['scale.units.pre']:'',units_post=typeof args.options['scale.units.post']=='string'?args.options['scale.units.post']:'',max=Number(args.options['scale.max']),min=typeof args.options['scale.min']=='number'?args.options['scale.min']:0,strict=args.options['scale.strict'],decimals=Number(args.options['scale.decimals']),point=args.options['scale.point'],thousand=args.options['scale.thousand'],original_max=max,round=args.options['scale.round'],scale={max:1,labels:[],values:[]},formatter=args.options['scale.formatter'];prefix=args.object.type==='hbar'?'xaxis':'yaxis';prefix=args.object.type==='odo'?'':prefix;if(!max){var max=1;for(var i=0;i<numlabels;++i){var label=((((max-min)/numlabels)+min)*(i+1)).toFixed(decimals);scale.labels.push(units_pre+label+units_post);scale.values.push(parseFloat(label))}}else if(max<=1&&!strict){var arr=[1,0.5,0.10,0.05,0.010,0.005,0.0010,0.0005,0.00010,0.00005,0.000010,0.000005,0.0000010,0.0000005,0.00000010,0.00000005,0.000000010,0.000000005,0.0000000010,0.0000000005,0.00000000010,0.00000000005,0.000000000010,0.000000000005,0.0000000000010,0.0000000000005],vals=[];for(var i=0;i<arr.length;++i){if(max>arr[i]){i--;break;}}
+scale.max=arr[i];scale.labels=[];scale.values=[];for(var j=0;j<numlabels;++j){var value=((((arr[i]-min)/numlabels)*(j+1))+min).toFixed(decimals);scale.values.push(value);scale.labels.push(RGraph.numberFormat({object:args.object,number:value,unitspre:units_pre,unitspost:units_post,thousand:thousand,point:point,formatter:formatter,decimals:decimals}));}}else if(!strict){max=Math.ceil(max);var interval=Math.pow(10,Math.max(1,Number(String(Number(max)-Number(min)).length-1)));var topValue=interval;while(topValue<max){topValue+=(interval/2);}
+if(Number(original_max)>Number(topValue)){topValue+=(interval/2);}
+if(max<=10){topValue=(Number(original_max)<=5?5:10);}
+if(args.object&&typeof round=='boolean'&&round){topValue=10*interval;}
+scale.max=topValue;var tmp_point=properties[prefix+'ScalePoint'];var tmp_thousand=properties[prefix+'ScaleThousand'];args.object.set(prefix+'scaleThousand',thousand);args.object.set(prefix+'scalePoint',point);for(var i=0;i<numlabels;++i){scale.labels.push(RGraph.numberFormat({object:args.object,number:((((i+1)/numlabels)*(topValue-min))+min).toFixed(decimals),unitspre:units_pre,unitspost:units_post,point:point,thousand:thousand,formatter:formatter}));scale.values.push(((((i+1)/numlabels)*(topValue-min))+min).toFixed(decimals));}
+args.object.set(prefix+'scaleThousand',tmp_thousand);args.object.set(prefix+'scalePoint',tmp_point);}else if(typeof max=='number'&&strict){for(var i=0;i<numlabels;++i){scale.labels.push(RGraph.numberFormat({object:args.object,number:((((i+1)/numlabels)*(max-min))+min).toFixed(decimals),unitspre:units_pre,unitspost:units_post,thousand:thousand,point:point,formatter:formatter}));scale.values.push(((((i+1)/numlabels)*(max-min))+min).toFixed(decimals));}
+scale.max=max;}
+scale.units_pre=units_pre;scale.units_post=units_post;scale.point=point;scale.decimals=decimals;scale.thousand=thousand;scale.numlabels=numlabels;scale.round=Boolean(round);scale.min=min;scale.formatter=formatter;for(var i=0;i<scale.values.length;++i){scale.values[i]=parseFloat(scale.values[i]);}
+return scale;};RGraph.parseJSONGradient=function(args)
+{var obj=args.object,def=args.def,context=args.object.context;def=eval("("+def+")");if(typeof def.r1==='number'&&typeof def.r2==='number'){var grad=context.createRadialGradient(def.x1,def.y1,def.r1,def.x2,def.y2,def.r2);}else{var grad=context.createLinearGradient(def.x1,def.y1,def.x2,def.y2);}
+var diff=1/(def.colors.length-1);grad.addColorStop(0,RGraph.trim(def.colors[0]));for(var j=1,len=def.colors.length;j<len;++j){grad.addColorStop(j*diff,RGraph.trim(def.colors[j]));}
+return grad;};RGraph.arrayInvert=function()
+{var args=RGraph.getArgs(arguments,'array');for(var i=0,len=args.array.length;i<len;++i){args.array[i]=!args.array[i];}
+return args.array;};RGraph.arrayTrim=function()
+{var args=RGraph.getArgs(arguments,'array');var out=[],content=false;for(var i=0;i<args.array.length;i++){if(args.array[i]){content=true;}
+if(content){out.push(args.array[i]);}}
+out=RGraph.arrayReverse(out);var out2=[],content=false;for(var i=0;i<out.length;i++){if(out[i]){content=true;}
+if(content){out2.push(out[i]);}}
+out2=RGraph.arrayReverse(out2);return out2;};RGraph.arrayClone=function()
+{var args=RGraph.getArgs(arguments,'array');if(args.array===null||typeof args.array!=='object'){return args.array;}
+return JSON.parse(JSON.stringify(args.array));};RGraph.clone=RGraph.arrayClone;RGraph.arrayMax=function()
+{var args=RGraph.getArgs(arguments,'array,ignore');var max=null;if(typeof args.array==='number'){return args.array;}
+if(RGraph.isNull(args.array)){return 0;}
+for(var i=0,len=args.array.length;i<len;++i){if(typeof args.array[i]==='number'&&!isNaN(args.array[i])){var val=args.ignore?Math.abs(args.array[i]):args.array[i];if(typeof max==='number'){max=Math.max(max,val);}else{max=val;}}}
+return max;};RGraph.arrayMin=function(args)
+{var args=RGraph.getArgs(arguments,'array,ignore');var max=null,min=null,ma=Math;if(typeof args.array==='number'){return args.array;}
+if(RGraph.isNull(args.array)){return 0;}
+for(var i=0,len=args.array.length;i<len;++i){if(typeof args.array[i]==='number'){var val=args.ignore?Math.abs(args.array[i]):args.array[i];if(typeof min==='number'){min=Math.min(min,val);}else{min=val;}}}
+return min;};RGraph.arrayPad=function()
+{var args=RGraph.getArgs(arguments,'array,length,value');if(args.array.length<args.length){for(var i=args.array.length;i<args.length;i+=1){args.array[i]=args.value;}}
+return args.array;};RGraph.arraySum=function()
+{var args=RGraph.getArgs(arguments,'array');if(typeof args.array==='number'){return args.array;}
+if(RGraph.isNull(args.array)){return 0;}
+var i,sum,len=args.array.length;for(i=0,sum=0;i<len;sum+=(args.array[i++]||0));return sum;};RGraph.arrayLinearize=function()
+{var arr=[],args=arguments
+for(var i=0,len=args.length;i<len;++i){if(typeof args[i]==='object'&&args[i]){for(var j=0,len2=args[i].length;j<len2;++j){var sub=RGraph.arrayLinearize(args[i][j]);for(var k=0,len3=sub.length;k<len3;++k){arr.push(sub[k]);}}}else{arr.push(args[i]);}}
+return arr;};RGraph.arrayShift=function()
+{var args=RGraph.getArgs(arguments,'array');var ret=[];for(var i=1,len=args.array.length;i<len;++i){ret.push(args.array[i]);}
+return ret;};RGraph.arrayReverse=function()
+{var args=RGraph.getArgs(arguments,'array');if(!args.array){return;}
+var newarr=[];for(var i=args.array.length-1;i>=0;i-=1){newarr.push(args.array[i]);}
+return newarr;};RGraph.abs=function()
+{var args=RGraph.getArgs(arguments,'value');if(typeof args.value==='string'){args.value=parseFloat(args.value)||0;}
+if(typeof args.value==='number'){return Math.abs(args.value);}
+if(typeof args.value==='object'){for(i in args.value){if(typeof args.value[i]==='string'||typeof args.value[i]==='number'||typeof args.value[i]==='object'){args.value[i]=RGraph.abs(args.value[i]);}}
+return args.value;}
+return 0;};RGraph.clear=RGraph.Clear=function(args)
+{var args=RGraph.getArgs(arguments,'canvas,color');var obj=args.canvas.__object__;var context=args.canvas.getContext('2d');var color=args.color||(obj&&obj.get('clearto'));if(!args.canvas){return;}
+RGraph.fireCustomEvent(obj,'onbeforeclear');if(RGraph.text.domNodeCache&&RGraph.text.domNodeCache[args.canvas.id]){for(var i in RGraph.text.domNodeCache[args.canvas.id]){var el=RGraph.text.domNodeCache[args.canvas.id][i];if(el&&el.style){el.style.display='none';}}}
+if(!color||(color&&color==='rgba(0,0,0,0)'||color==='transparent')){context.clearRect(-100,-100,args.canvas.width+200,args.canvas.height+200);context.globalCompositeOperation='source-over';}else if(color){obj.path('fs % fr -100 -100 % %',color,args.canvas.width+200,args.canvas.height+200);}else{obj.path('fs % fr -100 -100 % %',obj.get('clearto'),args.canvas.width+200,args.canvas.height+200);}
+if(RGraph.Registry.get('background.image.'+args.canvas.id)){var img=RGraph.Registry.get('background.image.'+args.canvas.id);img.style.position='absolute';img.style.left='-10000px';img.style.top='-10000px';}
+if(RGraph.Registry.get('tooltip')&&obj&&!obj.get('tooltipsNohideonclear')){RGraph.hideTooltip(args.canvas);}
+args.canvas.style.cursor='default';RGraph.fireCustomEvent(obj,'onclear');};RGraph.drawTitle=function()
+{var args=RGraph.getArgs(arguments,'object,text,marginTop,centerx');var canvas=args.object.canvas,context=args.object.context,properties=args.object.properties,marginLeft=properties.marginLeft,marginRight=properties.marginRight,marginTop=args.marginTop,marginBottom=properties.marginBottom,centerx=(args.centerx?args.centerx:((canvas.width-marginLeft-marginRight)/2)+marginLeft),keypos=properties.keyPosition,vpos=properties.titleVpos,hpos=properties.titleHpos,bgcolor=properties.titleBackground,x=properties.titleX,y=properties.titleY,halign='center',valign='center',textConf=RGraph.getTextConf({object:args.object,prefix:'title'});var size=textConf.size,bold=textConf.bold,italic=textConf.italic;if(RGraph.isNull(bold)){textConf.bold=true;bold=true;}
+if(args.object.type=='bar'&&properties.variant=='3d'){keypos='margin';}
+context.beginPath();context.fillStyle=textConf.color?textConf.color:'black';if(keypos&&keypos!='margin'){var valign='center';}else if(!keypos){var valign='center';}else{var valign='bottom';}
+if(typeof properties.titleVpos==='number'){vpos=properties.titleVpos*marginTop;if(properties.xaxisPosition==='top'){vpos=properties.titleVpos*marginBottom+marginTop+(canvas.height-marginTop-marginBottom);}}else{vpos=marginTop-size-5;if(properties.xaxisPosition==='top'){vpos=canvas.height-marginBottom+size+5;}}
+if(typeof hpos==='number'){centerx=hpos*canvas.width;}
+if(typeof x==='number')centerx=x;if(typeof y==='number')vpos=y;if(typeof x==='string')centerx+=parseFloat(x);if(typeof y==='string')vpos+=parseFloat(y);if(typeof properties.titleOffsetx==='number')centerx+=properties.titleOffsetx;if(typeof properties.titleOffsety==='number')vpos+=properties.titleOffsety;if(typeof properties.titleHalign==='string'){halign=properties.titleHalign;}
+if(typeof properties.titleValign==='string'){valign=properties.titleValign;}
+if(typeof textConf.color!==null){var oldColor=context.fillStyle,newColor=textConf.color;context.fillStyle=newColor?newColor:'black';}
+var ret=RGraph.text({object:args.object,font:textConf.font,size:textConf.size,color:textConf.color,bold:textConf.bold,italic:textConf.italic,x:centerx,y:vpos,text:args.text,valign:valign,halign:halign,bounding:bgcolor!=null,'bounding.fill':bgcolor,tag:'title',marker:false});context.fillStyle=oldColor;};RGraph.getMouseXY=function()
+{var args=RGraph.getArgs(arguments,'event');if(!args.event.target){return;}
+var el=args.event.target,canvas=el,caStyle=canvas.style,offsetX=0,offsetY=0,x,y,borderLeft=parseInt(caStyle.borderLeftWidth)||0,borderTop=parseInt(caStyle.borderTopWidth)||0,paddingLeft=parseInt(caStyle.paddingLeft)||0,paddingTop=parseInt(caStyle.paddingTop)||0,additionalX=borderLeft+paddingLeft,additionalY=borderTop+paddingTop;if(typeof args.event.offsetX==='number'&&typeof args.event.offsetY==='number'){if(!RGraph.ISIE&&!RGraph.ISOPERA){x=args.event.offsetX-borderLeft-paddingLeft;y=args.event.offsetY-borderTop-paddingTop;}else if(RGraph.ISIE){x=args.event.offsetX-paddingLeft;y=args.event.offsetY-paddingTop;}else{x=args.event.offsetX;y=args.event.offsetY;}}else{if(typeof el.offsetParent!=='undefined'){do{offsetX+=el.offsetLeft;offsetY+=el.offsetTop;}while((el=el.offsetParent));}
+x=args.event.pageX-offsetX-additionalX;y=args.event.pageY-offsetY-additionalY;x-=(2*(parseInt(document.body.style.borderLeftWidth)||0));y-=(2*(parseInt(document.body.style.borderTopWidth)||0));}
+return[x,y];};RGraph.getCanvasXY=function()
+{var args=RGraph.getArgs(arguments,'canvas');if(args.canvas.getBoundingClientRect){var rect=args.canvas.getBoundingClientRect();var scrollLeft=window.pageXOffset||document.documentElement.scrollLeft,scrollTop=window.pageYOffset||document.documentElement.scrollTop;return[rect.x+scrollLeft,rect.y+scrollTop];}
+var x=0;var y=0;var el=args.canvas;do{x+=el.offsetLeft;y+=el.offsetTop;if(el.tagName.toLowerCase()=='table'&&(RGraph.ISCHROME||RGraph.ISSAFARI)){x+=parseInt(el.border)||0;y+=parseInt(el.border)||0;}
+el=el.offsetParent;}while(el&&el.tagName.toLowerCase()!='body');var paddingLeft=args.canvas.style.paddingLeft?parseInt(args.canvas.style.paddingLeft):0;var paddingTop=args.canvas.style.paddingTop?parseInt(args.canvas.style.paddingTop):0;var borderLeft=args.canvas.style.borderLeftWidth?parseInt(args.canvas.style.borderLeftWidth):0;var borderTop=args.canvas.style.borderTopWidth?parseInt(args.canvas.style.borderTopWidth):0;if(navigator.userAgent.indexOf('Firefox')>0){x+=parseInt(document.body.style.borderLeftWidth)||0;y+=parseInt(document.body.style.borderTopWidth)||0;}
+return[x+paddingLeft+borderLeft,y+paddingTop+borderTop];};RGraph.isFixed=function()
+{var args=RGraph.getArgs(arguments,'canvas');var i=0;while(args.canvas&&args.canvas.tagName.toLowerCase()!='body'&&i<99){if(args.canvas.style.position=='fixed'){return args.canvas;}
+args.canvas=args.canvas.offsetParent;}
+return false;};RGraph.register=function()
+{var args=RGraph.getArgs(arguments,'object');if(typeof args.object==='function'){var func=args.object;var temp=function()
+{this.id=null;this.isFunction=true;this.canvas={id:null};this.getObjectByXY=function(){return false;};this.get=function(){};this.set=function(){};this.draw=function(){func();};};args.object=new temp();}
+if(!args.object.get('noregister')&&args.object.get('register')!==false){RGraph.ObjectRegistry.add(args.object);args.object.set('register',false);}};RGraph.redraw=function()
+{var args=RGraph.getArgs(arguments,'color');var objectRegistry=RGraph.ObjectRegistry.objects.byCanvasID;if(typeof args.color==='object'&&args.color&&typeof args.color.toString==='function'&&typeof args.color.toString().indexOf==='function'&&args.color.toString().indexOf('HTMLCanvasElement')>-1){var opt={canvas:args.color};if(arguments[1]){opt.color=arguments[1];}
+return RGraph.redrawCanvas(opt);}
+var tags=document.getElementsByTagName('canvas');for(var i=0,len=tags.length;i<len;++i){if(tags[i]&&tags[i].__object__&&tags[i].__object__.isrgraph){if(!tags[i].noclear){RGraph.clear(tags[i],args.color?args.color:null);}}}
+for(var i=0,len=objectRegistry.length;i<len;++i){if(objectRegistry[i]){var id=objectRegistry[i][0];objectRegistry[i][1].draw();}}};RGraph.redrawCanvas=function()
+{var args=RGraph.getArgs(arguments,'canvas,clear,color');var objects=RGraph.ObjectRegistry.getObjectsByCanvasID(args.canvas.id);if(RGraph.isNull(args.clear)||(typeof args.clear==='boolean'&&args.clear!==false)){var color=args.color||args.canvas.__object__.get('clearto')||'transparent';RGraph.clear(args.canvas,args.color);}
+for(var i=0,len=objects.length;i<len;++i){if(objects[i]){if(objects[i]&&objects[i].isrgraph){objects[i].draw();}}}};RGraph.Background.draw=function()
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties,height=0,marginLeft=args.object.marginLeft,marginRight=args.object.marginRight,marginTop=args.object.marginTop,marginBottom=args.object.marginBottom,variant=properties.variant
+args.object.context.fillStyle=properties.textColor;if(variant=='3d'){args.object.context.save();args.object.context.translate(properties.variantThreedOffsetx,-1*properties.variantThreedOffsety);}
+if(args.object.type!=='bar'&&args.object.type!=='waterfall'&&args.object.type!=='hbar'&&args.object.type!=='line'&&args.object.type!=='gantt'&&args.object.type!=='scatter'&&typeof properties.xaxisTitle==='string'&&properties.xaxisTitle.length){var size=properties.textSize+2;var hpos=((args.object.canvas.width-marginLeft-marginRight)/2)+marginLeft;var vpos=args.object.canvas.height-marginBottom+25;if(typeof properties.xaxisTitlePos==='number'){vpos=args.object.canvas.height-(marginBottom*properties.xaxisTitlePos);}
+if(typeof properties.xaxisTitleX==='number'){hpos=properties.xaxisTitleX;}
+if(typeof properties.xaxisTitleY==='number'){vpos=properties.xaxisTitleY;}
+var textConf=RGraph.getTextConf({object:args.object,prefix:'xaxisTitle'});RGraph.text({object:args.object,font:textConf.font,size:textConf.size,color:textConf.color,bold:textConf.bold,italic:textConf.italic,x:hpos,y:vpos,text:properties.xaxisTitle,halign:'center',valign:'top',tag:'xaxis.title'});}
+if(args.object.type!=='bar'&&args.object.type!=='waterfall'&&args.object.type!=='hbar'&&args.object.type!=='line'&&args.object.type!=='gantt'&&args.object.type!=='scatter'&&typeof properties.yaxisTitle==='string'&&properties.yaxisTitle.length){var size=properties.textSize+2;var font=properties.textFont;var italic=properties.textItalic;var angle=270;var bold=properties.yaxisTitleBold;var color=properties.yaxisTitleColor;if(typeof properties.yaxisTitlePos=='number'){var yaxis_title_pos=properties.yaxisTitlePos*marginLeft;}else if(args.object.type==='hbar'&&RGraph.isNull(properties.yaxisTitlePos)){var yaxis_title_pos=properties.marginLeft-args.object.yaxisLabelsSize;}else{if(args.object&&args.object.scale2){var yaxisTitleDimensions=RGraph.measureText({text:args.object.scale2.labels[args.object.scale2.labels.length-1],bold:typeof properties.yaxisScaleBold==='boolean'?properties.yaxisScaleBold:properties.textBold,font:properties.yaxisScaleFont||properties.textFont,size:typeof properties.yaxisScaleSize==='number'?properties.yaxisScaleSize:properties.textSize});}else{yaxisTitleDimensions=[0,0];}
+var yaxis_title_pos=properties.marginLeft-yaxisTitleDimensions[0]-7;}
+if(typeof properties.yaxisTitleSize==='number'){size=properties.yaxisTitleSize;}
+if(typeof properties.yaxisTitleItalic==='boolean'){italic=properties.yaxisTitleItalic;}
+if(typeof properties.yaxisTitleFont==='string'){font=properties.yaxisTitleFont;}
+if(properties.yaxisTitleAlign=='right'||properties.yaxisTitlePosition=='right'||(args.object.type==='hbar'&&properties.yaxisPosition==='right'&&typeof properties.yaxisTitleAlign==='undefined'&&typeof properties.yaxisTitlePosition==='undefined')){angle=90;yaxis_title_pos=typeof properties.yaxisTitlePos==='number'?(args.object.canvas.width-marginRight)+(properties.yaxisTitlePos*marginRight):args.object.canvas.width-marginRight+(properties.yaxisLabelsSize||properties.textSize)+10;}
+var y=((args.object.canvas.height-marginTop-marginBottom)/2)+marginTop;if(typeof properties.yaxisTitleX==='number'){yaxis_title_pos=properties.yaxisTitleX;}
+if(typeof properties.yaxisTitleY==='number'){y=properties.yaxisTitleY;}
+args.object.context.fillStyle=color;var textConf=RGraph.getTextConf({object:args.object,prefix:'yaxisTitle'});RGraph.text({object:args.object,font:textConf.font,size:textConf.size,color:textConf.color,bold:textConf.bold,italic:textConf.italic,x:yaxis_title_pos,y:y,valign:'bottom',halign:'center',angle:angle,text:properties.yaxisTitle,tag:'yaxis.title',accessible:false});}
+var bgcolor=properties.backgroundColor;if(bgcolor){args.object.context.fillStyle=bgcolor;args.object.context.fillRect(marginLeft+0.5,marginTop+0.5,args.object.canvas.width-marginLeft-marginRight,args.object.canvas.height-marginTop-marginBottom);}
+var numbars=(properties.yaxisLabelsCount||5);if(typeof properties.backgroundBarsCount==='number'){numbars=properties.backgroundBarsCount;}
+var barHeight=(args.object.canvas.height-marginBottom-marginTop)/numbars;args.object.context.beginPath();args.object.context.fillStyle=properties.backgroundBarsColor1;args.object.context.strokeStyle=args.object.context.fillStyle;height=(args.object.canvas.height-marginBottom);for(var i=0;i<numbars;i+=2){args.object.context.rect(marginLeft,(i*barHeight)+marginTop,args.object.canvas.width-marginLeft-marginRight,barHeight);}
+args.object.context.fill();args.object.context.beginPath();args.object.context.fillStyle=properties.backgroundBarsColor2;args.object.context.strokeStyle=args.object.context.fillStyle;for(var i=1;i<numbars;i+=2){args.object.context.rect(marginLeft,(i*barHeight)+marginTop,args.object.canvas.width-marginLeft-marginRight,barHeight);}
+args.object.context.fill();args.object.context.beginPath();var func=function(obj,cacheCanvas,cacheContext)
+{if(properties.backgroundGrid){properties.backgroundGridHlinesCount+=0.0001;if(properties.backgroundGridAutofit){if(properties.backgroundGridAutofitAlign){if(obj.type==='hbar'){obj.set('backgroundGridHlinesCount',obj.data.length);}
+if(obj.type==='line'){if(typeof properties.backgroundGridVlinesCount==='number'){}else if(properties.xaxisLabels&&properties.xaxisLabels.length){obj.set('backgroundGridVlinesCount',properties.xaxisLabels.length-1);}else{obj.set('backgroundGridVlinesCount',obj.data[0].length>0?obj.data[0].length-1:0);}}else if(obj.type==='waterfall'){obj.set('backgroundGridVlinesCount',obj.data.length+(properties.total?1:0));}else if(obj.type==='bar'){obj.set('backgroundGridVlinesCount',obj.data.length);}else if(obj.type==='scatter'){if(typeof properties.backgroundGridVlinesCount!=='number'){if(RGraph.isArray(properties.xaxisLabels)&&properties.xaxisLabels.length){obj.set('backgroundGridVlinesCount',properties.xaxisLabels.length);}else{obj.set('backgroundGridVlinesCount',10);}}}else if(obj.type==='gantt'){if(typeof obj.get('backgroundGridVlinesCount')==='number'){}else{obj.set('backgroundGridVlinesCount',properties.xaxisScaleMax);}
+obj.set('backgroundGridHlinesCount',obj.data.length);}else if(obj.type==='hbar'&&RGraph.isNull(properties.backgroundGridHlinesCount)){obj.set('backgroundGridHlinesCount',obj.data.length);}}
+var vsize=((cacheCanvas.width-marginLeft-marginRight))/properties.backgroundGridVlinesCount;var hsize=(cacheCanvas.height-marginTop-marginBottom)/properties.backgroundGridHlinesCount;obj.set('backgroundGridVsize',vsize);obj.set('backgroundGridHsize',hsize);}
+obj.context.beginPath();cacheContext.lineWidth=properties.backgroundGridLinewidth?properties.backgroundGridLinewidth:1;cacheContext.strokeStyle=properties.backgroundGridColor;if(properties.backgroundGridDashed&&typeof cacheContext.setLineDash=='function'){cacheContext.setLineDash([3,5]);}
+if(properties.backgroundGridDotted&&typeof cacheContext.setLineDash=='function'){cacheContext.setLineDash([1,3]);}
+obj.context.beginPath();if(properties.backgroundGridHlines){height=(cacheCanvas.height-marginBottom)
+var hsize=properties.backgroundGridHsize;for(y=marginTop;y<=height;y+=hsize){cacheContext.moveTo(marginLeft,Math.round(y));cacheContext.lineTo(args.object.canvas.width-marginRight,Math.round(y));}}
+if(properties.backgroundGridVlines){var width=(cacheCanvas.width-marginRight);var vsize=properties.backgroundGridVsize;for(var x=marginLeft;Math.round(x)<=width;x+=vsize){cacheContext.moveTo(Math.round(x),marginTop);cacheContext.lineTo(Math.round(x),obj.canvas.height-marginBottom);}}
+if(properties.backgroundGridBorder){cacheContext.strokeStyle=properties.backgroundGridColor;cacheContext.strokeRect(Math.round(marginLeft),Math.round(marginTop),obj.canvas.width-marginLeft-marginRight,obj.canvas.height-marginTop-marginBottom);}}
+cacheContext.stroke();cacheContext.beginPath();cacheContext.closePath();}
+RGraph.cachedDraw(args.object,args.object.uid+'_background',func);if(variant=='3d'){args.object.context.restore();}
+if(typeof args.object.context.setLineDash=='function'){args.object.context.setLineDash([1,0]);}
+args.object.context.stroke();if(typeof args.object.properties.title=='string'){RGraph.drawTitle(args.object,properties.title,args.object.marginTop,null,properties.titleSize?properties.titleSize:properties.textSize+2,args.object);}};RGraph.numberFormat=function(args)
+{var i;var prepend=args.unitspre?String(args.unitspre):'';var append=args.unitspost?String(args.unitspost):'';var output='';var decimal='';var decimal_seperator=typeof args.point==='string'?args.point:'.';var thousand_seperator=typeof args.thousand==='string'?args.thousand:',';RegExp.$1='';var i,j;if(typeof args.formatter==='function'){return(args.formatter)(args);}
+if(String(args.number).indexOf('e')>0){return String(prepend+String(args.number)+append);}
+args.number=String(args.number);if(args.number.indexOf('.')>0){var tmp=args.number;args.number=args.number.replace(/\.(.*)/,'');decimal=tmp.replace(/(.*)\.(.*)/,'$2');}
+var seperator=thousand_seperator;var foundPoint;for(i=(args.number.length-1),j=0;i>=0;j++,i--){var character=args.number.charAt(i);if(j%3==0&&j!=0){output+=seperator;}
+output+=character;}
+var rev=output;output='';for(i=(rev.length-1);i>=0;i--){output+=rev.charAt(i);}
+if(output.indexOf('-'+args.thousand)==0){output='-'+output.substr(('-'+args.thousand).length);}
+if(decimal.length){output=output+decimal_seperator+decimal;decimal='';RegExp.$1='';}
+if(output.charAt(0)=='-'){output=output.replace(/-/,'');prepend='-'+prepend;}
+output=output.replace(/^,+/,'');return prepend+output+append;};RGraph.drawBars=function()
+{var args=RGraph.getArgs(arguments,'object'),properties=args.object.properties,hbars=properties.backgroundHbars;if(hbars===null){return;}
+args.object.context.beginPath();for(var i=0,len=hbars.length;i<len;++i){var start=hbars[i][0];var length=hbars[i][1];var color=hbars[i][2];if(RGraph.isNull(start))start=args.object.scale2.max
+if(start>args.object.scale2.max)start=args.object.scale2.max;if(RGraph.isNull(length))length=args.object.scale2.max-start;if(start+length>args.object.scale2.max)length=args.object.scale2.max-start;if(start+length<(-1*args.object.scale2.max))length=(-1*args.object.scale2.max)-start;if(properties.xaxisPosition=='center'&&start==args.object.scale2.max&&length<(args.object.scale2.max* -2)){length=args.object.scale2.max* -2;}
+var x=properties.marginLeft;var y=args.object.getYCoord(start);var w=args.object.canvas.width-properties.marginLeft-properties.marginRight;var h=args.object.getYCoord(start+length)-y;if(RGraph.ISOPERA!=-1&&properties.xaxisPosition=='center'&&h<0){h*=-1;y=y-h;}
+if(properties.xaxisPosition=='top'){y=args.object.canvas.height-y;h*=-1;}
+args.object.context.fillStyle=color;args.object.context.fillRect(x,y,w,h);}};RGraph.drawInGraphLabels=function()
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties,labels=properties.labelsIngraph,labels_processed=[];var fgcolor='black',bgcolor='white',direction=1;if(!labels){return;}
+var textConf=RGraph.getTextConf({object:args.object,prefix:'labelsIngraph'});for(var i=0,len=labels.length;i<len;i+=1){if(typeof labels[i]==='number'){for(var j=0;j<labels[i];++j){labels_processed.push(null);}}else if(typeof labels[i]==='string'||typeof labels[i]==='object'){labels_processed.push(labels[i]);}else{labels_processed.push('');}}
+RGraph.noShadow(args.object);if(labels_processed&&labels_processed.length>0){for(var i=0,len=labels_processed.length;i<len;i+=1){if(labels_processed[i]){var coords=args.object.coords[i];if(coords&&coords.length>0){var x=((args.object.type=='bar'?coords[0]+(coords[2]/2):coords[0]))+(properties.labelsIngraphOffsetx||0);var y=(args.object.type=='bar'?coords[1]+(coords[3]/2):coords[1])+(properties.labelsIngraphOffsety||0);var length=typeof labels_processed[i][4]==='number'?labels_processed[i][4]:25;args.object.context.beginPath();args.object.context.fillStyle='black';args.object.context.strokeStyle='black';if(args.object.type==='bar'){if(args.object.get('xaxisPosition')=='top'){length*=-1;}
+if(properties.variant=='dot'){args.object.context.moveTo(Math.round(x),args.object.coords[i][1]-5);args.object.context.lineTo(Math.round(x),args.object.coords[i][1]-5-length);var text_x=Math.round(x);var text_y=args.object.coords[i][1]-5-length;}else if(properties.variant=='arrow'){args.object.context.moveTo(Math.round(x),args.object.coords[i][1]-5);args.object.context.lineTo(Math.round(x),args.object.coords[i][1]-5-length);var text_x=Math.round(x);var text_y=args.object.coords[i][1]-5-length;}else{args.object.context.arc(Math.round(x),y,2.5,0,6.28,0);args.object.context.moveTo(Math.round(x),y);args.object.context.lineTo(Math.round(x),y-length);var text_x=Math.round(x);var text_y=y-length;}
+args.object.context.stroke();args.object.context.fill();}else{if(typeof labels_processed[i]=='object'&&typeof labels_processed[i][3]=='number'&&labels_processed[i][3]==-1){drawUpArrow(x,y)
+var valign='top';var text_x=x;var text_y=y+5+length;}else{var text_x=x;var text_y=y-5-length;if(text_y<5&&(typeof labels_processed[i]==='string'||typeof labels_processed[i][3]==='undefined')){text_y=y+5+length;var valign='top';}
+if(valign==='top'){drawUpArrow(x,y);}else{drawDownArrow(x,y);}}
+args.object.context.fill();}
+args.object.context.beginPath();if((typeof labels_processed[i]==='object'&&typeof labels_processed[i][1]==='string')){args.object.context.fillStyle=labels_processed[i][1];}else{args.object.context.fillStyle=properties.labelsIngraphColor;}
+RGraph.text({object:args.object,font:textConf.font,size:textConf.size,color:args.object.context.fillStyle||textConf.color,bold:textConf.bold,italic:textConf.italic,x:text_x,y:text_y+(args.object.properties.textAccessible?2:0),text:(typeof labels_processed[i]==='object'&&typeof labels_processed[i][0]==='string')?labels_processed[i][0]:labels_processed[i],valign:valign||'bottom',halign:'center',bounding:true,'bounding.fill':(typeof labels_processed[i]==='object'&&typeof labels_processed[i][2]==='string')?labels_processed[i][2]:'white',tag:'labels ingraph'});args.object.context.fill();}
+function drawUpArrow(x,y)
+{args.object.context.moveTo(Math.round(x),y+5);args.object.context.lineTo(Math.round(x),y+5+length);args.object.context.stroke();args.object.context.beginPath();args.object.context.moveTo(Math.round(x),y+5);args.object.context.lineTo(Math.round(x)-3,y+10);args.object.context.lineTo(Math.round(x)+3,y+10);args.object.context.closePath();}
+function drawDownArrow(x,y)
+{args.object.context.moveTo(Math.round(x),y-5);args.object.context.lineTo(Math.round(x),y-5-length);args.object.context.stroke();args.object.context.beginPath();args.object.context.moveTo(Math.round(x),y-5);args.object.context.lineTo(Math.round(x)-3,y-10);args.object.context.lineTo(Math.round(x)+3,y-10);args.object.context.closePath();}
+valign=undefined;}}}};RGraph.hideCrosshairCoords=function()
+{var div=RGraph.Registry.get('coordinates.coords.div');if(div&&div.style.opacity==1&&div.__object__.get('crosshairsCoordsFadeout')){var style=RGraph.Registry.get('coordinates.coords.div').style;setTimeout(function(){style.opacity=0.9;},25);setTimeout(function(){style.opacity=0.8;},50);setTimeout(function(){style.opacity=0.7;},75);setTimeout(function(){style.opacity=0.6;},100);setTimeout(function(){style.opacity=0.5;},125);setTimeout(function(){style.opacity=0.4;},150);setTimeout(function(){style.opacity=0.3;},175);setTimeout(function(){style.opacity=0.2;},200);setTimeout(function(){style.opacity=0.1;},225);setTimeout(function(){style.opacity=0;},250);setTimeout(function(){style.display='none';},275);}};RGraph.draw3DAxes=function()
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties;var marginLeft=args.object.marginLeft,marginRight=args.object.marginRight,marginTop=args.object.marginTop,marginBottom=args.object.marginBottom,xaxispos=properties.xaxisPosition,graphArea=args.object.canvas.height-marginTop-marginBottom,halfGraphArea=graphArea/2,offsetx=properties.variantThreedOffsetx,offsety=properties.variantThreedOffsety,xaxis=properties.variantThreedXaxis,yaxis=properties.variantThreedYaxis
+if(yaxis){RGraph.draw3DYAxis(args.object);}
+if(xaxis){if(xaxispos==='center'){args.object.path('b m % % l % % l % % l % % c s #aaa f #ddd',marginLeft,marginTop+halfGraphArea,marginLeft+offsetx,marginTop+halfGraphArea-offsety,args.object.canvas.width-marginRight+offsetx,marginTop+halfGraphArea-offsety,args.object.canvas.width-marginRight,marginTop+halfGraphArea);}else{if(args.object.type==='hbar'){var xaxisYCoord=args.object.canvas.height-args.object.properties.marginBottom;}else{var xaxisYCoord=args.object.getYCoord(0);}
+args.object.path('m % % l % % l % % l % % c s #aaa f #ddd',marginLeft,xaxisYCoord,marginLeft+offsetx,xaxisYCoord-offsety,args.object.canvas.width-marginRight+offsetx,xaxisYCoord-offsety,args.object.canvas.width-marginRight,xaxisYCoord);}}};RGraph.draw3DYAxis=function(args)
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties;var marginLeft=args.object.marginLeft,marginRight=args.object.marginRight,marginTop=args.object.marginTop,marginBottom=args.object.marginBottom,xaxispos=properties.xaxisPosition,graphArea=args.object.canvas.height-marginTop-marginBottom,halfGraphArea=graphArea/2,offsetx=properties.variantThreedOffsetx,offsety=properties.variantThreedOffsety;if((args.object.type==='hbar'||args.object.type==='bar')&&properties.yaxisPosition==='center'){var x=((args.object.canvas.width-marginLeft-marginRight)/2)+marginLeft;}else if((args.object.type==='hbar'||args.object.type==='bar')&&properties.yaxisPosition==='right'){var x=args.object.canvas.width-marginRight;}else{var x=marginLeft;}
+args.object.path('b m % % l % % l % % l % % s #aaa f #ddd',x,marginTop,x+offsetx,marginTop-offsety,x+offsetx,args.object.canvas.height-marginBottom-offsety,x,args.object.canvas.height-marginBottom);};RGraph.roundedRect=function()
+{var args=RGraph.getArgs(arguments,'context,x,y,width,height,radius,roundtl,roundtr,roundbl,roundbr');var r=args.radius?args.radius:3;r=Math.min(Math.min(args.width,args.height)/2,args.radius);var corner_tl=(args.roundtl===false)?false:true,corner_tr=(args.roundtr===false)?false:true,corner_bl=(args.roundbl===false)?false:true,corner_br=(args.roundbr===false)?false:true;args.context.beginPath();args.context.moveTo(args.x,args.y+r);if(corner_tl){args.context.arc(args.x+r,args.y+r,r,RGraph.PI,RGraph.PI+RGraph.HALFPI,false);}else{args.context.lineTo(args.x,args.y);args.context.lineTo(args.x+r,args.y);}
+if(corner_tr){args.context.arc(args.x+args.width-r,args.y+r,r,RGraph.PI+RGraph.HALFPI,0,false);}else{args.context.lineTo(args.x+args.width,args.y);args.context.lineTo(args.x+args.width,args.y+r);}
+if(corner_br){args.context.arc(args.x+args.width-r,args.y+args.height-r,r,0,RGraph.HALFPI,false);}else{args.context.lineTo(args.x+args.width,args.y+args.height);args.context.lineTo(args.x+args.width-r,args.y+args.height);}
+if(corner_bl){args.context.arc(args.x+r,args.y-r+args.height,r,RGraph.HALFPI,RGraph.PI,false);}else{args.context.lineTo(args.x,args.y+args.height);args.context.lineTo(args.x,args.y+args.height-r);}
+args.context.closePath();};RGraph.addCustomEventListener=function()
+{var args=RGraph.getArgs(arguments,'object,name,func');if(typeof RGraph.events[args.object.uid]==='undefined'){RGraph.events[args.object.uid]=[];}
+if(args.name.substr(0,2)!=='on'){args.name='on'+args.name;}
+RGraph.events[args.object.uid].push([args.object,args.name,args.func]);return RGraph.events[args.object.uid].length-1;};RGraph.fireCustomEvent=function()
+{var args=RGraph.getArgs(arguments,'object,name');if(args.name.substr(0,2)!=='on'){args.name='on'+args.name;}
+if(args.object&&args.object.isrgraph){if(args.object[args.name]){(args.object[args.name])(args.object);}
+var uid=args.object.uid;if(typeof uid==='string'&&typeof RGraph.events==='object'&&typeof RGraph.events[uid]==='object'&&RGraph.events[uid].length>0){for(var j=0;j<RGraph.events[uid].length;++j){if(RGraph.events[uid][j]&&RGraph.events[uid][j][1]===args.name){RGraph.events[uid][j][2](args.object);}}}}};RGraph.removeAllCustomEventListeners=function()
+{var args=RGraph.getArgs(arguments,'uid');if(args.uid&&RGraph.events[args.uid]){RGraph.events[args.uid]=[];}else{RGraph.events=[];RGraph.ObjectRegistry.iterate(function(obj)
+{if(obj.onclick)obj.onclick=null;if(obj.onmousemove)obj.onmousemove=null;if(obj.onmouseover)obj.onmouseover=null;if(obj.onmouseout)obj.onmouseout=null;});}};RGraph.removeCustomEventListener=function()
+{var args=RGraph.getArgs(arguments,'object,index');if(typeof RGraph.events==='object'&&typeof RGraph.events[args.object.uid]==='object'&&typeof RGraph.events[args.object.uid][args.index]==='object'){RGraph.events[args.object.uid][args.index]=null;}};RGraph.drawBackgroundImage=function(args)
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties;if(typeof properties.backgroundImage==='string'){if(typeof args.object.canvas.__rgraph_background_image__==='undefined'){var img=new Image();img.__object__=args.object;img.__canvas__=args.object.canvas;img.__context__=args.object.context;img.src=args.object.get('backgroundImage');args.object.canvas.__rgraph_background_image__=img;}else{img=args.object.canvas.__rgraph_background_image__;}
+img.onload=function()
+{args.object.__rgraph_background_image_loaded__=true;RGraph.clear(args.object.canvas);RGraph.redrawCanvas(args.object.canvas);}
+var marginLeft=args.object.marginLeft;var marginRight=args.object.marginRight;var marginTop=args.object.marginTop;var marginBottom=args.object.marginBottom;var stretch=properties.backgroundImageStretch;var align=properties.backgroundImageAlign;if(typeof align==='string'){if(align.indexOf('right')!=-1){var x=args.object.canvas.width-(properties.backgroundImageW||img.width)-marginRight;}else{var x=marginLeft;}
+if(align.indexOf('bottom')!=-1){var y=args.object.canvas.height-(properties.backgroundImageH||img.height)-marginBottom;}else{var y=marginTop;}}else{var x=marginLeft||25;var y=marginTop||25;}
+var x=typeof properties.backgroundImageX==='number'?properties.backgroundImageX:x;var y=typeof properties.backgroundImageY==='number'?properties.backgroundImageY:y;var w=stretch?args.object.canvas.width-marginLeft-marginRight:img.width;var h=stretch?args.object.canvas.height-marginTop-marginBottom:img.height;if(typeof properties.backgroundImageW==='number')w=properties.backgroundImageW;if(typeof properties.backgroundImageH==='number')h=properties.backgroundImageH;var oldAlpha=args.object.context.globalAlpha;args.object.context.globalAlpha=properties.backgroundImageAlpha;args.object.context.drawImage(img,x,y,w,h);args.object.context.globalAlpha=oldAlpha;}};RGraph.hasTooltips=function()
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties;if(typeof properties.tooltips=='object'&&properties.tooltips){for(var i=0,len=properties.tooltips.length;i<len;++i){if(!RGraph.isNull(args.object.get('tooltips')[i])){return true;}}}else if(typeof properties.tooltips==='function'){return true;}
+return false;};RGraph.createUID=function()
+{return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c)
+{var r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);return v.toString(16);});};RGraph.ObjectRegistry.add=function()
+{var args=RGraph.getArgs(arguments,'object');var uid=args.object.uid;var id=args.object.canvas.id;RGraph.ObjectRegistry.objects.byUID[RGraph.ObjectRegistry.objects.byUID.length]=[uid,args.object];RGraph.ObjectRegistry.objects.byCanvasID.push([id,args.object]);};RGraph.ObjectRegistry.remove=function()
+{var args=RGraph.getArgs(arguments,'object');var id=args.object.id;var uid=args.object.uid;for(var i=0;i<RGraph.ObjectRegistry.objects.byUID.length;++i){if(RGraph.ObjectRegistry.objects.byUID[i]&&RGraph.ObjectRegistry.objects.byUID[i][1].uid==uid){RGraph.ObjectRegistry.objects.byUID[i]=null;}}
+for(var i=0;i<RGraph.ObjectRegistry.objects.byCanvasID.length;++i){if(RGraph.ObjectRegistry.objects.byCanvasID[i]&&RGraph.ObjectRegistry.objects.byCanvasID[i][1]&&RGraph.ObjectRegistry.objects.byCanvasID[i][1].uid==uid){RGraph.ObjectRegistry.objects.byCanvasID[i]=null;}}};RGraph.ObjectRegistry.clear=function()
+{if(typeof arguments[0]==='object'&&!RGraph.isNull(arguments)&&(typeof arguments[0].canvas==='object'||typeof arguments[0].id==='string')){var args=arguments[0];}else{if(typeof arguments[0]==='string'){var args={id:arguments[0]};}else if(typeof arguments[0]==='object'&&arguments[0].getContext){var args={canvas:arguments[0]};}else{RGraph.ObjectRegistry.objects={};RGraph.ObjectRegistry.objects.byUID=[];RGraph.ObjectRegistry.objects.byCanvasID=[];return;}}
+if(args.id||args.canvas){if(args.canvas){args.id=args.canvas.id;}
+var objects=RGraph.ObjectRegistry.getObjectsByCanvasID(args.id);for(var i=0,len=objects.length;i<len;++i){RGraph.ObjectRegistry.remove(objects[i]);}}else{RGraph.ObjectRegistry.objects={};RGraph.ObjectRegistry.objects.byUID=[];RGraph.ObjectRegistry.objects.byCanvasID=[];}};RGraph.ObjectRegistry.list=function()
+{var args=RGraph.getArgs(arguments,'alert');var list=[];for(var i=0,len=RGraph.ObjectRegistry.objects.byUID.length;i<len;++i){if(RGraph.ObjectRegistry.objects.byUID[i]){list.push(RGraph.ObjectRegistry.objects.byUID[i][1].type);}}
+if(args.alert){$p(list);}else{return list;}};RGraph.ObjectRegistry.clearByType=function()
+{var args=RGraph.getArgs(arguments,'type');var objects=RGraph.ObjectRegistry.objects.byUID;for(var i=0,len=objects.length;i<len;++i){if(objects[i]){var uid=objects[i][0],obj=objects[i][1];if(obj&&obj.type===args.type){RGraph.ObjectRegistry.remove(obj);}}}};RGraph.ObjectRegistry.iterate=function()
+{var args=RGraph.getArgs(arguments,'func,type');var objects=RGraph.ObjectRegistry.objects.byUID;for(var i=0,len=objects.length;i<len;++i){if(typeof args.type==='string'){var types=args.type.split(/,/);for(var j=0,len2=types.length;j<len2;++j){if(types[j]==objects[i][1].type){args.func(objects[i][1]);}}}else{args.func(objects[i][1]);}}};RGraph.ObjectRegistry.getObjectsByCanvasID=function()
+{var args=RGraph.getArgs(arguments,'id');var store=RGraph.ObjectRegistry.objects.byCanvasID;var ret=[];for(var i=0,len=store.length;i<len;++i){if(store[i]&&store[i][0]==args.id){ret.push(store[i][1]);}}
+return ret;};RGraph.ObjectRegistry.firstbyxy=RGraph.ObjectRegistry.getObjectByXY=RGraph.ObjectRegistry.getFirstObjectByXY=function()
+{var args=RGraph.getArgs(arguments,'event');var canvas=args.event.target;var ret=null;var objects=RGraph.ObjectRegistry.getObjectsByCanvasID(canvas.id);for(var i=(objects.length-1);i>=0;--i){var obj=objects[i].getObjectByXY(args.event);if(obj){return obj;}}};RGraph.ObjectRegistry.getObjectsByXY=function()
+{var args=RGraph.getArgs(arguments,'event');var canvas=args.event.target,ret=[],objects=RGraph.ObjectRegistry.getObjectsByCanvasID(canvas.id);for(var i=(objects.length-1);i>=0;--i){var obj=objects[i].getObjectByXY(args.event);if(obj){ret.push(obj);}}
+return ret;};RGraph.ObjectRegistry.get=RGraph.ObjectRegistry.getObjectByUID=function()
+{var args=RGraph.getArgs(arguments,'uid');var objects=RGraph.ObjectRegistry.objects.byUID;for(var i=0,len=objects.length;i<len;++i){if(objects[i]&&objects[i][1].uid==args.uid){return objects[i][1];}}};RGraph.ObjectRegistry.bringToFront=function()
+{var args=RGraph.getArgs(arguments,'object,redraw');var redraw=args.redraw?true:args.redraw;RGraph.ObjectRegistry.remove(args.object);RGraph.ObjectRegistry.add(args.object);if(redraw){RGraph.redrawCanvas(args.object.canvas);}};RGraph.ObjectRegistry.type=RGraph.ObjectRegistry.getObjectsByType=function()
+{var args=RGraph.getArgs(arguments,'type');var objects=RGraph.ObjectRegistry.objects.byUID;var ret=[];for(i in objects){if(objects[i]&&objects[i][1]&&objects[i][1].type&&objects[i][1].type&&objects[i][1].type==args.type){ret.push(objects[i][1]);}}
+return ret;};RGraph.ObjectRegistry.first=RGraph.ObjectRegistry.getFirstObjectByType=function()
+{var args=RGraph.getArgs(arguments,'type');var objects=RGraph.ObjectRegistry.objects.byUID;for(var i in objects){if(objects[i]&&objects[i][1]&&objects[i][1].type==args.type){return objects[i][1];}}
+return null;};RGraph.getAngleByXY=function()
+{var args=RGraph.getArgs(arguments,'cx,cy,x,y');var angle=Math.atan((args.y-args.cy)/(args.x-args.cx));angle=Math.abs(angle)
+if(args.x>=args.cx&&args.y>=args.cy){angle+=RGraph.TWOPI;}else if(args.x>=args.cx&&args.y<args.cy){angle=(RGraph.HALFPI-angle)+(RGraph.PI+RGraph.HALFPI);}else if(args.x<args.cx&&args.y<args.cy){angle+=RGraph.PI;}else{angle=RGraph.PI-angle;}
+if(angle>RGraph.TWOPI){angle-=RGraph.TWOPI;}
+return angle;};RGraph.getHypLength=function()
+{var args=RGraph.getArgs(arguments,'x1,y1,x2,y2');return Math.sqrt(((args.x2-args.x1)*(args.x2-args.x1))+((args.y2-args.y1)*(args.y2-args.y1)));};RGraph.getRadiusEndPoint=function()
+{var args=RGraph.getArgs(arguments,'cx,cy,angle,radius');var x=args.cx+(Math.cos(args.angle)*args.radius);var y=args.cy+(Math.sin(args.angle)*args.radius);return[x,y];};RGraph.installEventListeners=function()
+{var args=RGraph.getArgs(arguments,'object');var properties=args.object.properties;if(RGraph.installCanvasClickListener){RGraph.installWindowMousedownListener(args.object);RGraph.installWindowMouseupListener(args.object);RGraph.installCanvasMousemoveListener(args.object);RGraph.installCanvasMouseupListener(args.object);RGraph.installCanvasMousedownListener(args.object);RGraph.installCanvasClickListener(args.object);}else if(RGraph.hasTooltips(args.object)||properties.adjustable||properties.annotatable||properties.contextmenu||properties.keyInteractive||typeof args.object.onclick==='function'||typeof args.object.onmousemove==='function'||typeof args.object.onmouseout==='function'||typeof args.object.onmouseover==='function'){alert('[RGRAPH] You appear to have used dynamic features but not included the file: RGraph.common.dynamic.js');}};RGraph.pr=function(obj)
+{var args=RGraph.getArgs(arguments,'object,alert,indent,counter');var indent=(args.indent?args.indent:'    ');var str='';var counter=typeof args.counter=='number'?args.counter:0;if(counter>=3){return'';}
+switch(typeof obj){case'string':str+=args.object+' ('+(typeof args.object)+', '+args.object.length+')';break;case'number':str+=args.object+' ('+(typeof args.object)+')';break;case'boolean':str+=args.object+' ('+(typeof args.object)+')';break;case'function':str+='function () {}';break;case'undefined':str+='undefined';break;case'null':str+='null';break;case'object':if(RGraph.isNull(args.object)){str+='null';}else{str+='Object {'+'\n'
+for(var j in obj){str+=indent+'    '+j+' => '+RGraph.pr(args.object[j],true,indent+'    ',counter+1)+'\n';}
+str+=indent+'}';}
+break;default:str+='Unknown type: '+typeof args.object+'';break;}
+if(!args.alert){alert(str);}
+return str;};RGraph.dashedLine=function()
+{var args=RGraph.getArgs(arguments,'context,x1,y1,x2,y2,size'),dx=args.x2-args.x1,dy=args.y2-args.y1,num=Math.floor(Math.sqrt((dx*dx)+(dy*dy))/(args.size||3)),xLen=dx/num,yLen=dy/num,count=0;do{if(count%2==0&&count>0){args.context.lineTo(args.x1,args.y1);}else{args.context.moveTo(args.x1,args.y1);}
+args.x1+=xLen;args.y1+=yLen;count++;}while(count<=num);};RGraph.AJAX=function()
+{var args=RGraph.getArgs(arguments,'url,callback');if(window.XMLHttpRequest){var httpRequest=new XMLHttpRequest();}else if(window.ActiveXObject){var httpRequest=new ActiveXObject("Microsoft.XMLHTTP");}
+httpRequest.onreadystatechange=function()
+{if(this.readyState==4&&this.status==200){this.__user_callback__=args.callback;this.__user_callback__(this.responseText);}}
+httpRequest.open('GET',args.url,true);if(httpRequest&&httpRequest.setRequestHeader){httpRequest.setRequestHeader('Cache-Control','no-cache');}
+httpRequest.send();};RGraph.AJAX.post=RGraph.AJAX.POST=function()
+{var args=RGraph.getArgs(arguments,'url,data,callback');var crumbs=[];if(window.XMLHttpRequest){var httpRequest=new XMLHttpRequest();}else if(window.ActiveXObject){var httpRequest=new ActiveXObject("Microsoft.XMLHTTP");}
+httpRequest.onreadystatechange=function()
+{if(this.readyState==4&&this.status==200){this.__user_callback__=args.callback;this.__user_callback__(this.responseText);}}
+httpRequest.open('POST',args.url,true);httpRequest.setRequestHeader("Content-type","application/x-www-form-urlencoded");for(i in args.data){if(typeof i=='string'){crumbs.push(i+'='+encodeURIComponent(args.data[i]));}}
+httpRequest.send(crumbs.join('&'));};RGraph.AJAX.getNumber=function()
+{var args=RGraph.getArgs(arguments,'url,callback');RGraph.AJAX(args.url,function()
+{var num=parseFloat(this.responseText);args.callback(num);});};RGraph.AJAX.getString=function()
+{var args=RGraph.getArgs(arguments,'url,callback');RGraph.AJAX(args.url,function()
+{var str=String(this.responseText);args.callback(str);});};RGraph.AJAX.getJSON=function()
+{var args=RGraph.getArgs(arguments,'url,callback');RGraph.AJAX(args.url,function()
+{var json=eval('('+this.responseText+')');args.callback(json);});};RGraph.AJAX.getCSV=function()
+{var args=RGraph.getArgs(arguments,'url,callback,separator');var separator=args.separator?args.separator:',';RGraph.AJAX(args.url,function()
+{var regexp=new RegExp(separator);var arr=this.responseText.split(regexp);for(var i=0,len=arr.length;i<len;++i){arr[i]=parseFloat(arr[i]);}
+args.callback(arr);});};RGraph.rotateCanvas=function()
+{var args=RGraph.getArgs(arguments,'canvas,x,y,angle');var context=args.canvas.getContext('2d');context.translate(args.x,args.y);context.rotate(args.angle);context.translate(0-args.x,0-args.y);};RGraph.measureText=function()
+{var args=RGraph.getArgs(arguments,'text,bold,font,size');if(typeof RGraph.measuretext_cache==='undefined'){RGraph.measuretext_cache=[];}
+var str=args.text+':'+args.bold+':'+args.font+':'+args.size;if(typeof RGraph.measuretext_cache=='object'&&RGraph.measuretext_cache[str]){return RGraph.measuretext_cache[str];}
+if(!RGraph.measuretext_cache['text-div']){var div=document.createElement('DIV');div.style.position='absolute';div.style.top='-100px';div.style.left='-100px';div.style.lineHeight=(args.size||12)*1.5+'px';document.body.appendChild(div);RGraph.measuretext_cache['text-div']=div;}else if(RGraph.measuretext_cache['text-div']){var div=RGraph.measuretext_cache['text-div'];while(div.firstChild){div.removeChild(div.firstChild);}}
+div.insertAdjacentHTML('afterbegin',String(args.text).replace(/\r?\n/g,'<br />'));div.style.fontFamily=args.font;div.style.fontWeight=args.bold?'bold':'normal';div.style.fontSize=(args.size||12)+'pt';RGraph.measuretext_cache[str]=[div.offsetWidth,div.offsetHeight];return[div.offsetWidth,div.offsetHeight];};RGraph.text=function(args)
+{if(arguments[0]&&arguments[1]&&(typeof arguments[1].text==='string'||typeof arguments[1].text==='number')){var obj=arguments[0],args=arguments[1];}else{var obj=args.object;if(typeof args.text==='number'){args.text=String(args.text);}}
+for(var i in RGraph.text.defaults){if(typeof i==='string'&&typeof args[i]==='undefined'){args[i]=RGraph.text.defaults[i];}}
+function domtext()
+{if(String(args.size).toLowerCase().indexOf('italic')!==-1){args.size=args.size.replace(/ *italic +/,'');args.italic=true;}
+var cacheKey=Math.abs(parseInt(args.x))+'_'+Math.abs(parseInt(args.y))+'_'+String(args.text).replace(/[^a-zA-Z0-9]+/g,'_')+'_'+obj.canvas.id;if(!obj.canvas.rgraph_domtext_wrapper){var wrapper=document.createElement('div');wrapper.id=obj.canvas.id+'_rgraph_domtext_wrapper';wrapper.className='rgraph_domtext_wrapper';wrapper.style.overflow=obj.properties.textAccessibleOverflow!=false&&obj.properties.textAccessibleOverflow!='hidden'?'visible':'hidden';wrapper.style.width=obj.canvas.offsetWidth+'px';wrapper.style.height=obj.canvas.offsetHeight+'px';wrapper.style.cssFloat=obj.canvas.style.cssFloat;wrapper.style.display=obj.canvas.style.display||'inline-block';wrapper.style.position=obj.canvas.style.position||'relative';wrapper.style.left=obj.canvas.style.left;wrapper.style.right=obj.canvas.style.right;wrapper.style.top=obj.canvas.style.top;wrapper.style.bottom=obj.canvas.style.bottom;wrapper.style.width=obj.canvas.width+'px';wrapper.style.height=obj.canvas.height+'px';wrapper.style.lineHeight='initial';obj.canvas.style.position='absolute';obj.canvas.style.left=0;obj.canvas.style.top=0;obj.canvas.style.display='inline';obj.canvas.style.cssFloat='none';if((obj.type==='bar'||obj.type==='bipolar'||obj.type==='hbar')&&obj.properties.variant==='3d'){wrapper.style.transform='skewY(5.7deg)';}
+obj.canvas.parentNode.insertBefore(wrapper,obj.canvas);obj.canvas.parentNode.removeChild(obj.canvas);wrapper.appendChild(obj.canvas);obj.canvas.rgraph_domtext_wrapper=wrapper;}else{wrapper=obj.canvas.rgraph_domtext_wrapper;}
+var defaults={size:12,font:'Arial',italic:'normal',bold:'normal',valign:'bottom',halign:'left',marker:true,color:context.fillStyle,bounding:{enabled:false,fill:'rgba(255,255,255,0.7)',stroke:'#666',linewidth:1}}
+args.text=String(args.text).replace(/\r?\n/g,'[[RETURN]]');if(typeof RGraph.text.domNodeCache==='undefined'){RGraph.text.domNodeCache=new Array();}
+if(typeof RGraph.text.domNodeCache[obj.id]==='undefined'){RGraph.text.domNodeCache[obj.id]=new Array();}
+if(typeof RGraph.text.domNodeDimensionCache==='undefined'){RGraph.text.domNodeDimensionCache=new Array();}
+if(typeof RGraph.text.domNodeDimensionCache[obj.id]==='undefined'){RGraph.text.domNodeDimensionCache[obj.id]=new Array();}
+if(!RGraph.text.domNodeCache[obj.id]||!RGraph.text.domNodeCache[obj.id][cacheKey]){var span=document.createElement('span');span.style.position='absolute';span.style.display='inline';span.className=' rgraph_accessible_text'
++' rgraph_accessible_text_'+obj.id
++' rgraph_accessible_text_'+(args.tag||'').replace(/\./,'_')
++' rgraph_accessible_text_'+obj.type
++' '+(args.cssClass||'');span.style.left=(args.x*(parseInt(obj.canvas.offsetWidth)/parseInt(obj.canvas.width)))+'px';span.style.top=(args.y*(parseInt(obj.canvas.offsetHeight)/parseInt(obj.canvas.height)))+'px';span.style.color=args.color||defaults.color;span.style.fontFamily=args.font||defaults.font;span.style.fontWeight=args.bold?'bold':defaults.bold;span.style.fontStyle=args.italic?'italic':defaults.italic;span.style.fontSize=(args.size||defaults.size)+'pt';span.style.whiteSpace='nowrap';span.style.lineHeight=RGraph.ISIE?'normal':'initial';span.tag=args.tag;span.setAttribute('data-tag',args.tag);if(typeof args.angle==='number'&&args.angle!==0){var coords=RGraph.measureText(args.text,args.bold,args.font,args.size);var hOrigin,vOrigin;if(args.halign==='center'){hOrigin='50%';}
+else if(args.halign==='right'){hOrigin='100%';}
+else{hOrigin='0%';}
+if(args.valign==='center'){vOrigin='50%';}
+else if(args.valign==='top'){vOrigin='0%';}
+else{vOrigin='100%';}
+span.style.transformOrigin='{1} {2}'.format(hOrigin,vOrigin);span.style.transform='rotate('+args.angle+'deg)';}
+span.style.textShadow='{1}px {2}px {3}px {4}'.format(context.shadowOffsetX,context.shadowOffsetY,context.shadowBlur,context.shadowColor);if(args.bounding){span.style.border='1px solid '+(args['bounding.stroke']||defaults.bounding.stroke);span.style.backgroundColor=args['bounding.fill']||defaults.bounding.fill;span.style.borderWidth=typeof args['bounding.linewidth']==='number'?args['bounding.linewidth']:defaults.bounding.linewidth;}
+if((typeof obj.properties.textAccessiblePointerevents==='undefined'||obj.properties.textAccessiblePointerevents)&&obj.properties.textAccessiblePointerevents!=='none'){span.style.pointerEvents='auto';}else{span.style.pointerEvents='none';}
+span.style.padding=args.bounding?'2px':null;span.__text__=args.text
+span.insertAdjacentHTML('afterbegin',args.text.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace(/\[\[RETURN\]\]/g,'<br />'));wrapper.appendChild(span);args.halign=args.halign||'left';args.valign=args.valign||'bottom';if(args.halign==='right'){span.style.left=parseFloat(span.style.left)-span.offsetWidth+'px';span.style.textAlign='right';}else if(args.halign==='center'){span.style.left=parseFloat(span.style.left)-(span.offsetWidth/2)+'px';span.style.textAlign='center';}
+if(args.valign==='top'){}else if(args.valign==='center'){span.style.top=parseFloat(span.style.top)-(span.offsetHeight/2)+'px';}else{span.style.top=parseFloat(span.style.top)-span.offsetHeight+'px';}
+var offsetWidth=parseFloat(span.offsetWidth),offsetHeight=parseFloat(span.offsetHeight),top=parseFloat(span.style.top),left=parseFloat(span.style.left);RGraph.text.domNodeCache[obj.id][cacheKey]=span;RGraph.text.domNodeDimensionCache[obj.id][cacheKey]={left:left,top:top,width:offsetWidth,height:offsetHeight};span.id=cacheKey;}else{span=RGraph.text.domNodeCache[obj.id][cacheKey];span.style.display='inline';var offsetWidth=RGraph.text.domNodeDimensionCache[obj.id][cacheKey].width,offsetHeight=RGraph.text.domNodeDimensionCache[obj.id][cacheKey].height,top=RGraph.text.domNodeDimensionCache[obj.id][cacheKey].top,left=RGraph.text.domNodeDimensionCache[obj.id][cacheKey].left;}
+if(args.marker){obj.path('b m % % l % % m % % l % % s',args.x-5,args.y,args.x+5,args.y,args.x,args.y-5,args.x,args.y+5);}
+if(obj.type==='drawing.text'){if(obj.properties.tooltips){span.addEventListener(obj.properties.tooltipsEvent.indexOf('mousemove')!==-1?'mousemove':'click',function(e)
+{if(!RGraph.Registry.get('tooltip')||RGraph.Registry.get('tooltip').__index__!==0||RGraph.Registry.get('tooltip').__object__.uid!=obj.uid){RGraph.hideTooltip();RGraph.redraw();RGraph.tooltip(obj,obj.properties.tooltips[0],args.x,args.y,0,e);}},false);}}
+var ret={};ret.x=left;ret.y=top;ret.width=offsetWidth;ret.height=offsetHeight;ret.object=obj;ret.text=args.text;ret.tag=args.tag;RGraph.text.domNodeCache.reset=function()
+{if(arguments[0]){if(typeof arguments[0]==='string'){var canvas=document.getElementById(arguments[0])}else{var canvas=arguments[0];}
+var nodes=RGraph.text.domNodeCache[canvas.id];for(j in nodes){var node=RGraph.text.domNodeCache[canvas.id][j];if(node&&node.parentNode){node.parentNode.removeChild(node);}}
+RGraph.text.domNodeCache[canvas.id]=[];RGraph.text.domNodeDimensionCache[canvas.id]=[];}else{for(i in RGraph.text.domNodeCache){for(j in RGraph.text.domNodeCache[i]){if(RGraph.text.domNodeCache[i][j]&&RGraph.text.domNodeCache[i][j].parentNode){RGraph.text.domNodeCache[i][j].parentNode.removeChild(RGraph.text.domNodeCache[i][j]);}}}
+RGraph.text.domNodeCache=[];RGraph.text.domNodeDimensionCache=[];}};RGraph.text.find=function(args)
+{var span,nodes=[];if(args.object&&args.object.isrgraph){var id=args.object.id;}else if(args.id){var id=typeof args.id==='string'?args.id:args.object.id;args.object=document.getElementById(id).__object__;}else{alert('[RGRAPH] You Must give either an object or an ID to the RGraph.text.find() function');return false;}
+for(i in RGraph.text.domNodeCache[id]){span=RGraph.text.domNodeCache[id][i];if(typeof args.tag==='string'&&args.tag===span.tag){nodes.push(span);continue;}
+if(typeof args.tag==='object'&&args.tag.constructor.toString().indexOf('RegExp')){var regexp=new RegExp(args.tag);if(regexp.test(span.tag)){nodes.push(span);continue;}}
+if(typeof args.text==='string'&&args.text===span.__text__){nodes.push(span);continue;}
+if(typeof args.text==='object'&&args.text.constructor.toString().indexOf('RegExp')){var regexp=new RegExp(args.text);if(regexp.test(span.__text__)){nodes.push(span);continue;}}}
+if(typeof args.callback==='function'){(args.callback)({nodes:nodes,object:args.object});}
+return nodes;};ret.node=span;if(obj&&obj.isrgraph&&obj.coordsText){obj.coordsText.push(ret);}
+return ret;}
+if(obj&&obj.isrgraph){var obj=obj;var canvas=obj.canvas;var context=obj.context;}else if(typeof obj=='string'){var canvas=document.getElementById(obj);var context=canvas.getContext('2d');var obj=canvas.__object__;}else if(typeof obj.getContext==='function'){var canvas=obj;var context=canvas.getContext('2d');var obj=canvas.__object__;}else if(obj.toString().indexOf('CanvasRenderingContext2D')!=-1||RGraph.ISIE8&&obj.moveTo){var context=obj;var canvas=obj.canvas;var obj=canvas.__object__;}else if(RGraph.ISOLD&&obj.fillText){var context=obj;var canvas=obj.canvas;var obj=canvas.__object__;}
+if(typeof args.boundingFill==='string')args['bounding.fill']=args.boundingFill;if(typeof args.boundingStroke==='string')args['bounding.stroke']=args.boundingStroke;if(typeof args.boundingLinewidth==='number')args['bounding.linewidth']=args.boundingLinewidth;if(typeof args.textConfPrefix==='string'&&args.textConfPrefix.length){var textConf=RGraph.getTextConf({object:obj,prefix:args.textConfPrefix});args.font=textConf.font;args.size=textConf.size;args.color=textConf.color;args.bold=textConf.bold;args.italic=textConf.italic;}
+if(typeof args.accessible==='undefined'){if(obj&&obj.properties.textAccessible){return domtext();}}else if(typeof args.accessible==='boolean'&&args.accessible){return domtext();}
+var x=args.x,y=args.y,originalX=x,originalY=y,text=args.text,text_multiline=typeof text==='string'?text.split(/\r?\n/g):'',numlines=text_multiline.length,font=args.font?args.font:'Arial',size=args.size?args.size:10,size_pixels=size*1.5,bold=args.bold,italic=args.italic,halign=args.halign?args.halign:'left',valign=args.valign?args.valign:'bottom',tag=typeof args.tag=='string'&&args.tag.length>0?args.tag:'',marker=args.marker,angle=args.angle||0;if(typeof text=='number'){text=String(text);}
+var bounding=args.bounding,bounding_stroke=args['bounding.stroke']?args['bounding.stroke']:'black',bounding_fill=args['bounding.fill']?args['bounding.fill']:'rgba(255,255,255,0.7)',bounding_shadow=args['bounding.shadow'],bounding_shadow_color=args['bounding.shadow.color']||'#ccc',bounding_shadow_blur=args['bounding.shadow.blur']||3,bounding_shadow_offsetx=args['bounding.shadow.offsetx']||3,bounding_shadow_offsety=args['bounding.shadow.offsety']||3,bounding_linewidth=typeof args['bounding.linewidth']==='number'?args['bounding.linewidth']:1;var ret={};if(typeof args.color==='string'){var orig_fillstyle=context.fillStyle;context.fillStyle=args.color;}
+if(typeof text!=='string'){return;}
+if(angle!=0){context.save();context.translate(x,y);context.rotate((Math.PI/180)*angle)
+x=0;y=0;}
+context.font=(args.italic?'italic ':'')+(args.bold?'bold ':'')+size+'pt '+font;var width=0;for(var i=0;i<numlines;++i){width=Math.max(width,context.measureText(text_multiline[i]).width);}
+var height=size_pixels*numlines;if(args.marker){var marker_size=10;var strokestyle=context.strokeStyle;context.beginPath();context.strokeStyle='red';context.moveTo(x,y-marker_size);context.lineTo(x,y+marker_size);context.moveTo(x-marker_size,y);context.lineTo(x+marker_size,y);context.stroke();context.strokeStyle=strokestyle;}
+if(halign=='center'){context.textAlign='center';var boundingX=x-2-(width/2);}else if(halign=='right'){context.textAlign='right';var boundingX=x-2-width;}else{context.textAlign='left';var boundingX=x-2;}
+if(valign=='center'){context.textBaseline='middle';y-=1;y-=((numlines-1)/2)*size_pixels;var boundingY=y-(size_pixels/2)-2;}else if(valign=='top'){context.textBaseline='top';var boundingY=y-2;}else if(valign=='alphabetic'){context.textBaseline='alphabetic';var boundingY=y-size_pixels+5;}else{context.textBaseline='bottom';if(numlines>1){y-=((numlines-1)*size_pixels);}
+var boundingY=y-size_pixels-2;}
+var boundingW=width+4;var boundingH=height+4;if(bounding){var pre_bounding_linewidth=context.lineWidth,pre_bounding_strokestyle=context.strokeStyle,pre_bounding_fillstyle=context.fillStyle,pre_bounding_shadowcolor=context.shadowColor,pre_bounding_shadowblur=context.shadowBlur,pre_bounding_shadowoffsetx=context.shadowOffsetX,pre_bounding_shadowoffsety=context.shadowOffsetY;context.lineWidth=bounding_linewidth?bounding_linewidth:0.001;context.strokeStyle=bounding_stroke;context.fillStyle=bounding_fill;if(bounding_shadow){context.shadowColor=bounding_shadow_color;context.shadowBlur=bounding_shadow_blur;context.shadowOffsetX=bounding_shadow_offsetx;context.shadowOffsetY=bounding_shadow_offsety;}
+context.fillRect(boundingX,boundingY,boundingW,boundingH);context.strokeRect(boundingX,boundingY,boundingW,boundingH);context.lineWidth=pre_bounding_linewidth;context.strokeStyle=pre_bounding_strokestyle;context.fillStyle=pre_bounding_fillstyle;context.shadowColor=pre_bounding_shadowcolor
+context.shadowBlur=pre_bounding_shadowblur
+context.shadowOffsetX=pre_bounding_shadowoffsetx
+context.shadowOffsetY=pre_bounding_shadowoffsety}
+if(numlines>1){for(var i=0;i<numlines;++i){context.fillText(text_multiline[i],x,y+(size_pixels*i));}}else{context.fillText(text,x+0.5,y+0.5);}
+if(angle!=0){if(angle==90){if(halign=='left'){if(valign=='bottom'){boundingX=originalX-2;boundingY=originalY-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='center'){boundingX=originalX-(height/2)-2;boundingY=originalY-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='top'){boundingX=originalX-height-2;boundingY=originalY-2;boundingW=height+4;boundingH=width+4;}}else if(halign=='center'){if(valign=='bottom'){boundingX=originalX-2;boundingY=originalY-(width/2)-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='center'){boundingX=originalX-(height/2)-2;boundingY=originalY-(width/2)-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='top'){boundingX=originalX-height-2;boundingY=originalY-(width/2)-2;boundingW=height+4;boundingH=width+4;}}else if(halign=='right'){if(valign=='bottom'){boundingX=originalX-2;boundingY=originalY-width-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='center'){boundingX=originalX-(height/2)-2;boundingY=originalY-width-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='top'){boundingX=originalX-height-2;boundingY=originalY-width-2;boundingW=height+4;boundingH=width+4;}}}else if(angle==180){if(halign=='left'){if(valign=='bottom'){boundingX=originalX-width-2;boundingY=originalY-2;boundingW=width+4;boundingH=height+4;}
+if(valign=='center'){boundingX=originalX-width-2;boundingY=originalY-(height/2)-2;boundingW=width+4;boundingH=height+4;}
+if(valign=='top'){boundingX=originalX-width-2;boundingY=originalY-height-2;boundingW=width+4;boundingH=height+4;}}else if(halign=='center'){if(valign=='bottom'){boundingX=originalX-(width/2)-2;boundingY=originalY-2;boundingW=width+4;boundingH=height+4;}
+if(valign=='center'){boundingX=originalX-(width/2)-2;boundingY=originalY-(height/2)-2;boundingW=width+4;boundingH=height+4;}
+if(valign=='top'){boundingX=originalX-(width/2)-2;boundingY=originalY-height-2;boundingW=width+4;boundingH=height+4;}}else if(halign=='right'){if(valign=='bottom'){boundingX=originalX-2;boundingY=originalY-2;boundingW=width+4;boundingH=height+4;}
+if(valign=='center'){boundingX=originalX-2;boundingY=originalY-(height/2)-2;boundingW=width+4;boundingH=height+4;}
+if(valign=='top'){boundingX=originalX-2;boundingY=originalY-height-2;boundingW=width+4;boundingH=height+4;}}}else if(angle==270){if(halign=='left'){if(valign=='bottom'){boundingX=originalX-height-2;boundingY=originalY-width-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='center'){boundingX=originalX-(height/2)-4;boundingY=originalY-width-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='top'){boundingX=originalX-2;boundingY=originalY-width-2;boundingW=height+4;boundingH=width+4;}}else if(halign=='center'){if(valign=='bottom'){boundingX=originalX-height-2;boundingY=originalY-(width/2)-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='center'){boundingX=originalX-(height/2)-4;boundingY=originalY-(width/2)-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='top'){boundingX=originalX-2;boundingY=originalY-(width/2)-2;boundingW=height+4;boundingH=width+4;}}else if(halign=='right'){if(valign=='bottom'){boundingX=originalX-height-2;boundingY=originalY-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='center'){boundingX=originalX-(height/2)-2;boundingY=originalY-2;boundingW=height+4;boundingH=width+4;}
+if(valign=='top'){boundingX=originalX-2;boundingY=originalY-2;boundingW=height+4;boundingH=width+4;}}}
+context.restore();}
+context.textBaseline='alphabetic';context.textAlign='left';ret.x=boundingX;ret.y=boundingY;ret.width=boundingW;ret.height=boundingH
+ret.object=obj;ret.text=text;ret.tag=tag;if(obj&&obj.isrgraph&&obj.coordsText){obj.coordsText.push(ret);}
+if(typeof orig_fillstyle==='string'){context.fillStyle=orig_fillstyle;}
+return ret;};RGraph.text.defaults={};RGraph.addCustomText=function(obj)
+{if(RGraph.isArray(obj.properties.text)&&obj.properties.text.length){for(var i=0;i<obj.properties.text.length;++i){var conf=obj.properties.text[i];conf.object=obj;if(typeof conf.color!=='string'||!conf.color.length){conf.color='black';}
+RGraph.text(conf);}}};RGraph.sequentialIndexToGrouped=function()
+{var args=RGraph.getArgs(arguments,'index,data');var group=0;var grouped_index=0;while(--args.index>=0){if(RGraph.isNull(args.data[group])){group++;grouped_index=0;continue;}
+if(typeof args.data[group]=='number'){group++
+grouped_index=0;continue;}
+grouped_index++;if(grouped_index>=args.data[group].length){group++;grouped_index=0;}}
+return[group,grouped_index];};RGraph.groupedIndexToSequential=function()
+{var args=RGraph.getArgs(arguments,'object,dataset,index');for(var i=0,seq=0;i<=args.dataset;++i){for(var j=0;j<args.object.data[args.dataset].length;++j){if(i===args.dataset&&j===args.index){return seq;}
+seq++;}}
+return seq;};RGraph.Highlight.rect=function()
+{var args=RGraph.getArgs(arguments,'object,shape'),properties=args.object.properties;if(properties.tooltipsHighlight){args.object.context.lineWidth=1;args.object.context.beginPath();args.object.context.strokeStyle=properties.highlightStroke;args.object.context.fillStyle=properties.highlightFill;args.object.context.rect(args.shape.x-0.5,args.shape.y-0.5,args.shape.width+1,args.shape.height+1);args.object.context.stroke();args.object.context.fill();}};RGraph.Highlight.point=function()
+{var args=RGraph.getArgs(arguments,'object,shape');var properties=args.object.properties;if(properties.tooltipsHighlight){args.object.context.beginPath();args.object.context.strokeStyle=properties.highlightStroke;args.object.context.fillStyle=properties.highlightFill;var radius=properties.highlightPointRadius||2;args.object.context.arc(args.shape.x,args.shape.y,radius,0,RGraph.TWOPI,0);args.object.context.stroke();args.object.context.fill();}};RGraph.parseDate=function()
+{var args=RGraph.getArgs(arguments,'str');if(args.str.match(/^\d\d\d\d-\d\d-\d\d(t|T)\d\d:\d\d(:\d\d)?$/)){args.str=args.str.toUpperCase().replace(/T/,' ');}
+var d=new Date();var defaults={seconds:'00',minutes:'00',hours:'00',date:d.getDate(),month:d.getMonth()+1,year:d.getFullYear()};var months=['january','february','march','april','may','june','july','august','september','october','november','december'],months_regex=months.join('|');for(var i=0;i<months.length;++i){months[months[i]]=i;months[months[i].substring(0,3)]=i;months_regex=months_regex+'|'+months[i].substring(0,3);}
+var sep='[-./_=+~#:;,]+';var tokens=args.str.split(/ +/);for(var i=0,len=tokens.length;i<len;++i){if(tokens[i]){if(tokens[i].match(/^\d\d\d\d$/)){defaults.year=tokens[i];}
+var res=isMonth(tokens[i]);if(typeof res==='number'){defaults.month=res+1;}
+if(tokens[i].match(/^\d?\d(?:st|nd|rd|th)?$/)){defaults.date=parseInt(tokens[i]);}
+if(tokens[i].match(/^(\d\d):(\d\d):?(?:(\d\d))?$/)){defaults.hours=parseInt(RegExp.$1);defaults.minutes=parseInt(RegExp.$2);if(RegExp.$3){defaults.seconds=parseInt(RegExp.$3);}}
+if(tokens[i].match(new RegExp('^(\\d\\d\\d\\d)'+sep+'(\\d\\d)'+sep+'(\\d\\d)$','i'))){defaults.date=parseInt(RegExp.$3);defaults.month=parseInt(RegExp.$2);defaults.year=parseInt(RegExp.$1);}
+if(tokens[i].match(new RegExp('^(\\d\\d)'+sep+'(\\d\\d)'+sep+'(\\d\\d\\d\\d)$','i'))){defaults.date=parseInt(RegExp.$1);defaults.month=parseInt(RegExp.$2);defaults.year=parseInt(RegExp.$3);}}}
+args.str='{1}/{2}/{3} {4}:{5}:{6}'.format(defaults.year,String(defaults.month).length===1?'0'+(defaults.month):defaults.month,String(defaults.date).length===1?'0'+(defaults.date):defaults.date,String(defaults.hours).length===1?'0'+(defaults.hours):defaults.hours,String(defaults.minutes).length===1?'0'+(defaults.minutes):defaults.minutes,String(defaults.seconds).length===1?'0'+(defaults.seconds):defaults.seconds);return Date.parse(args.str);function isMonth(str)
+{var res=str.toLowerCase().match(months_regex);return res?months[res[0]]:false;}};RGraph.parseDateOld=function()
+{var args=RGraph.getArgs(arguments,'str');args.str=RGraph.trim(args.str);if(args.str==='now'){args.str=(new Date()).toString();}
+if(args.str.match(/^(\d\d)(?:-|\/)(\d\d)(?:-|\/)(\d\d\d\d)(.*)$/)){args.str='{1}/{2}/{3}{4}'.format(RegExp.$3,RegExp.$2,RegExp.$1,RegExp.$4);}
+if(args.str.match(/^(\d\d\d\d)(-|\/)(\d\d)(-|\/)(\d\d)( |T)(\d\d):(\d\d):(\d\d)$/)){args.str=RegExp.$1+'-'+RegExp.$3+'-'+RegExp.$5+'T'+RegExp.$7+':'+RegExp.$8+':'+RegExp.$9;}
+if(args.str.match(/^\d\d\d\d-\d\d-\d\d$/)){args.str=args.str.replace(/-/g,'/');}
+if(args.str.match(/^\d\d:\d\d:\d\d$/)){var dateObj=new Date();var date=dateObj.getDate();var month=dateObj.getMonth()+1;var year=dateObj.getFullYear();if(String(month).length===1)month='0'+month;if(String(date).length===1)date='0'+date;args.str=(year+'/'+month+'/'+date)+' '+args.str;}
+return Date.parse(args.str);};RGraph.resetColorsToOriginalValues=function()
+{var args=RGraph.getArgs(arguments,'object');if(args.object.original_colors){for(var j in args.object.original_colors){if(typeof j==='string'){args.object.properties[j]=RGraph.arrayClone(args.object.original_colors[j]);}}}
+if(typeof args.object.resetColorsToOriginalValues==='function'){args.object.resetColorsToOriginalValues();}
+args.object.colorsParsed=false;};RGraph.linearGradient=function()
+{var args=arguments[0];var gradient=args.object.context.createLinearGradient(args.x1,args.y1,args.x2,args.y2);var numColors=args.colors.length;for(var i=0;i<args.colors.length;++i){var color=args.colors[i];var stop=i/(numColors-1);gradient.addColorStop(stop,color);}
+return gradient;};RGraph.radialGradient=function()
+{var args=arguments[0];var gradient=args.object.context.createRadialGradient(args.x1,args.y1,args.r1,args.x2,args.y2,args.r2);var numColors=args.colors.length;for(var i=0;i<args.colors.length;++i){gradient.addColorStop(i/(numColors-1),args.colors[i]);}
+return gradient;};RGraph.clearEventListeners=function()
+{var args=RGraph.getArgs(arguments,'id');if(args.id&&args.id==='window'){window.removeEventListener('mousedown',RGraph.window_mousedown_event_listener,false);window.removeEventListener('mouseup',RGraph.window_mouseup_event_listener,false);}else{var canvas=document.getElementById(args.id);canvas.removeEventListener('mouseup',canvas.rgraph_mouseup_event_listener,false);canvas.removeEventListener('mousemove',canvas.rgraph_mousemove_event_listener,false);canvas.removeEventListener('mousedown',canvas.rgraph_mousedown_event_listener,false);canvas.removeEventListener('click',canvas.rgraph_click_event_listener,false);}};RGraph.hidePalette=function()
+{var div=RGraph.Registry.get('palette');if(typeof div=='object'&&div){div.style.visibility='hidden';div.style.display='none';RGraph.Registry.set('palette',null);}};RGraph.random=function()
+{var args=RGraph.getArgs(arguments,'min,max,decimals');var dp=args.decimals?args.decimals:0;var r=Math.random();return Number((((args.max-args.min)*r)+args.min).toFixed(dp));};RGraph.arrayRandom=function()
+{var args=RGraph.getArgs(arguments,'count,min,max,decimals');for(var i=0,arr=[];i<args.count;i+=1){arr.push(RGraph.random(args.min,args.max,args.decimals));}
+return arr;};RGraph.noShadow=function()
+{var args=RGraph.getArgs(arguments,'object');args.object.context.shadowColor='rgba(0,0,0,0)';args.object.context.shadowBlur=0;args.object.context.shadowOffsetx=0;args.object.context.shadowOffsety=0;};RGraph.setShadow=function()
+{if(typeof arguments[0]==='object'&&typeof arguments[0].object==='object'&&typeof arguments[0].object.isrgraph&&typeof arguments[0].prefix==='string'){var args=arguments[0];args.object.context.shadowColor=args.object.properties[args.prefix+'Color'];args.object.context.shadowOffsetX=args.object.properties[args.prefix+'Offsetx'];args.object.context.shadowOffsetY=args.object.properties[args.prefix+'Offsety'];args.object.context.shadowBlur=args.object.properties[args.prefix+'Blur'];}else if(arguments.length===1&&typeof arguments[0]==='object'&&typeof arguments[0].isrgraph){var obj=arguments[0];obj.context.shadowColor='rgba(0,0,0,0)';obj.context.shadowOffsetX=0;obj.context.shadowOffsetY=0;obj.context.shadowBlur=0;}else{var obj=arguments[0];obj.context.shadowColor=arguments[1];obj.context.shadowOffsetX=arguments[2];obj.context.shadowOffsetY=arguments[3];obj.context.shadowBlur=arguments[4];}};RGraph.Registry.set=function()
+{var args=RGraph.getArgs(arguments,'name,value');args.name=args.name.replace(/([A-Z])/g,function(str)
+{return'.'+String(RegExp.$1).toLowerCase();});RGraph.Registry.store[args.name]=args.value;return args.value;};RGraph.Registry.get=function()
+{var args=RGraph.getArgs(arguments,'name');args.name=args.name.replace(/([A-Z])/g,function(str)
+{return'.'+String(RegExp.$1).toLowerCase();});return RGraph.Registry.store[args.name];};RGraph.toRadians=function()
+{var args=RGraph.getArgs(arguments,'degrees');return args.degrees*(RGraph.PI/180);};RGraph.toDegrees=function()
+{var args=RGraph.getArgs(arguments,'radians');return args.radians*(180/Math.PI);};RGraph.log=function()
+{var args=RGraph.getArgs(arguments,'number,base');return Math.log(args.number)/(args.base?Math.log(args.base):1);};RGraph.isArray=function()
+{var args=RGraph.getArgs(arguments,'object');if(args.object&&args.object.constructor){var pos=args.object.constructor.toString().indexOf('Array');}else{return false;}
+return args.object!=null&&typeof pos==='number'&&pos>0&&pos<20;};RGraph.trim=function()
+{var args=RGraph.getArgs(arguments,'str');return RGraph.ltrim(RGraph.rtrim(args.str));};RGraph.ltrim=function()
+{var args=RGraph.getArgs(arguments,'str');return args.str.replace(/^(\s|\0)+/,'');};RGraph.rtrim=function()
+{var args=RGraph.getArgs(arguments,'str');return args.str.replace(/(\s|\0)+$/,'');};RGraph.isNull=function()
+{var args=RGraph.getArgs(arguments,'arg');if(typeof args.arg==='object'&&!args.arg){return true;}
+return false;};RGraph.async=function()
+{var args=RGraph.getArgs(arguments,'func,delay');return setTimeout(args.func,args.delay?args.delay:1);};RGraph.reset=function()
+{var args=RGraph.getArgs(arguments,'canvas');if(typeof args.canvas==='string'){args.canvas=document.getElementById(args.canvas);}
+args.canvas.width=args.canvas.width;RGraph.ObjectRegistry.clear(args.canvas);args.canvas.__rgraph_aa_translated__=false;if(RGraph.text.domNodeCache&&RGraph.text.domNodeCache.reset){RGraph.text.domNodeCache.reset(args.canvas);}
+if(!RGraph.text.domNodeCache){RGraph.text.domNodeCache=[];}
+if(!RGraph.text.domNodeDimensionCache){RGraph.text.domNodeDimensionCache=[];}
+RGraph.text.domNodeCache[args.canvas.id]=[];RGraph.text.domNodeDimensionCache[args.canvas.id]=[];};RGraph.Effects.updateCanvas=function()
+{var args=RGraph.getArgs(arguments,'func');window.requestAnimationFrame=window.requestAnimationFrame||window.webkitRequestAnimationFrame||window.msRequestAnimationFrame||window.mozRequestAnimationFrame||(function(func){setTimeout(func,16.666);});window.requestAnimationFrame(args.func);};RGraph.Effects.getEasingMultiplier=function()
+{var args=RGraph.getArgs(arguments,'frames,frame');return Math.pow(Math.sin((args.frame/args.frames)*RGraph.HALFPI),3);};RGraph.stringsToNumbers=function()
+{var args=RGraph.getArgs(arguments,'string,separator');var sep=args.separator||',';if(typeof args.string==='string'&&args.string.trim().match(/^\[ *\d+$/)){args.string=args.string.replace('[','');}
+if(typeof args.string==='number'){return args.string;}
+if(typeof args.string==='string'){if(args.string.indexOf(sep)!=-1){args.string=args.string.split(sep);}else{args.string=parseFloat(args.string);if(isNaN(args.string)){args.string=null;}}}
+if(typeof args.string==='object'&&!RGraph.isNull(args.string)){for(var i=0,len=args.string.length;i<len;i+=1){args.string[i]=RGraph.stringsToNumbers(args.string[i],args.separator);}}
+return args.string;};RGraph.cachedDraw=function()
+{var args=RGraph.getArgs(arguments,'object,id,function');if(!RGraph.cache[args.id]){RGraph.cache[args.id]={};RGraph.cache[args.id].object=args.object;RGraph.cache[args.id].canvas=document.createElement('canvas');RGraph.cache[args.id].canvas.setAttribute('width',args.object.canvas.width);RGraph.cache[args.id].canvas.setAttribute('height',args.object.canvas.height);RGraph.cache[args.id].canvas.setAttribute('id','background_cached_canvas'+args.object.canvas.id);RGraph.cache[args.id].canvas.__object__=args.object;RGraph.cache[args.id].context=RGraph.cache[args.id].canvas.getContext('2d');RGraph.cache[args.id].context.translate(0.5,0.5);args.function(args.object,RGraph.cache[args.id].canvas,RGraph.cache[args.id].context);}
+args.object.context.drawImage(RGraph.cache[args.id].canvas,-0.5,-0.5);};RGraph.parseObjectStyleConfig=function()
+{var args=RGraph.getArgs(arguments,'object,config');for(var i in args.config){if(typeof i==='string'){args.object.set(i,args.config[i]);}}};RGraph.path=function(args)
+{var arguments=Array.prototype.slice.call(arguments);if(arguments.length===1&&args.object&&args.path){var context=args.object.context;var p=args.path;var args=args.args;}else if(arguments.length===1&&args.context&&args.path){var context=args.context;var p=args.path;var args=args.args;}else if(arguments.length>=2&&arguments[0].isrgraph&&arguments[0].context){var context=arguments[0].context;var p=arguments[1];var args=arguments.length>2?arguments.slice(2):[];}else if(arguments.length>=2&&arguments[0].toString().indexOf('Context')){var context=arguments[0];var p=arguments[1];var args=arguments.length>2?arguments.slice(2):[];}
+if(typeof p==='string'){p=splitstring(p);}
+RGraph.path.last=RGraph.arrayClone(p);for(var i=0,len=p.length;i<len;i+=1){switch(p[i]){case'b':context.beginPath();break;case'c':context.closePath();break;case'm':context.moveTo(parseFloat(p[i+1]),parseFloat(p[i+2]));i+=2;break;case'l':context.lineTo(parseFloat(p[i+1]),parseFloat(p[i+2]));i+=2;break;case's':if(p[i+1])context.strokeStyle=p[i+1];context.stroke();i++;break;case'f':if(p[i+1]){context.fillStyle=p[i+1];}context.fill();i++;break;case'qc':context.quadraticCurveTo(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]));i+=4;break;case'bc':context.bezierCurveTo(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]),parseFloat(p[i+5]),parseFloat(p[i+6]));i+=6;break;case'r':context.rect(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]));i+=4;break;case'a':context.arc(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]),parseFloat(p[i+5]),p[i+6]==='true'||p[i+6]===true||p[i+6]===1||p[i+6]==='1'?true:false);i+=6;break;case'at':context.arcTo(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]),parseFloat(p[i+5]));i+=5;break;case'lw':context.lineWidth=parseFloat(p[i+1]);i++;break;case'e':context.ellipse(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]),parseFloat(p[i+5]),parseFloat(p[i+6]),parseFloat(p[i+7]),p[i+8]==='true'?true:false);i+=8;break;case'lj':context.lineJoin=p[i+1];i++;break;case'lc':context.lineCap=p[i+1];i++;break;case'sc':context.shadowColor=p[i+1];i++;break;case'sb':context.shadowBlur=parseFloat(p[i+1]);i++;break;case'sx':context.shadowOffsetX=parseFloat(p[i+1]);i++;break;case'sy':context.shadowOffsetY=parseFloat(p[i+1]);i++;break;case'fs':context.fillStyle=p[i+1];i++;break;case'ss':context.strokeStyle=p[i+1];i++;break;case'fr':context.fillRect(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]));i+=4;break;case'sr':context.strokeRect(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]));i+=4;break;case'cl':context.clip();break;case'sa':context.save();break;case'rs':context.restore();break;case'tr':context.translate(parseFloat(p[i+1]),parseFloat(p[i+2]));i+=2;break;case'sl':context.scale(parseFloat(p[i+1]),parseFloat(p[i+2]));i+=2;break;case'ro':context.rotate(parseFloat(p[i+1]));i++;break;case'tf':context.transform(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]),parseFloat(p[i+5]),parseFloat(p[i+6]));i+=6;break;case'stf':context.setTransform(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]),parseFloat(p[i+5]),parseFloat(p[i+6]));i+=6;break;case'cr':context.clearRect(parseFloat(p[i+1]),parseFloat(p[i+2]),parseFloat(p[i+3]),parseFloat(p[i+4]));i+=4;break;case'ld':var parts=p[i+1];context.setLineDash(parts);i+=1;break;case'ldo':context.lineDashOffset=p[i+1];i++;break;case'fo':context.font=p[i+1];i++;break;case'ft':context.fillText(p[i+1],parseFloat(p[i+2]),parseFloat(p[i+3]));i+=3;break;case'st':context.strokeText(p[i+1],parseFloat(p[i+2]),parseFloat(p[i+3]));i+=3;break;case'ta':context.textAlign=p[i+1];i++;break;case'tbl':context.textBaseline=p[i+1];i++;break;case'ga':context.globalAlpha=parseFloat(p[i+1]);i++;break;case'gco':context.globalCompositeOperation=p[i+1];i++;break;case'fu':(p[i+1])(context.canvas.__object__);i++;break;case'':break;default:alert('[ERROR] Unknown option: '+p[i]);}}
+function splitstring(p)
+{var ret=[],buffer='',inquote=false,quote='',substitutionIndex=0;for(var i=0;i<p.length;i+=1){var chr=p[i],isWS=chr.match(/ /);if(isWS){if(!inquote){if(buffer[0]==='"'||buffer[0]==="'"){buffer=buffer.substr(1,buffer.length-2);}
+if(buffer.trim()==='%'&&typeof args[substitutionIndex]!=='undefined'){buffer=args[substitutionIndex++];}
+ret.push(buffer);buffer='';}else{buffer+=chr;}}else{if(chr==="'"||chr==='"'){inquote=!inquote;}
+buffer+=chr;}}
+if(buffer.trim()==='%'&&args[substitutionIndex]){buffer=args[substitutionIndex++];}
+ret.push(buffer);return ret;}};RGraph.getTextConf=function(args)
+{var obj=args.object,properties=obj.properties,prefix=args.prefix;var font=typeof properties[prefix+'Font']==='string'?properties[prefix+'Font']:properties.textFont,size=typeof properties[prefix+'Size']==='number'?properties[prefix+'Size']:properties.textSize,color=typeof properties[prefix+'Color']==='string'?properties[prefix+'Color']:properties.textColor,bold=!RGraph.isNull(properties[prefix+'Bold'])?properties[prefix+'Bold']:properties.textBold,italic=!RGraph.isNull(properties[prefix+'Italic'])?properties[prefix+'Italic']:properties.textItalic;return{font:font,size:size,color:color,bold:bold,italic:italic};};RGraph.responsive=function(conf)
+{var obj=this;conf.sort(function(a,b)
+{var aNull=RGraph.isNull(a.maxWidth);var bNull=RGraph.isNull(b.maxWidth);if(aNull&&bNull)return 0;if(aNull&&!bNull)return-1;if(!aNull&&bNull)return 1;return b.maxWidth-a.maxWidth;});for(var i=0;i<conf.length;++i){if(conf[i+1]&&typeof conf[i+1].maxWidth==='number'){conf[i].minWidth=conf[i+1].maxWidth;}else if(!conf[i+1]){conf[i].minWidth=0;}}
+for(var i=0;i<conf.length;++i){conf[i].minWidth=RGraph.isNull(conf[i].minWidth)?0:conf[i].minWidth;conf[i].maxWidth=RGraph.isNull(conf[i].maxWidth)?100000:conf[i].maxWidth;var str='screen and (min-width: %1px) and (max-width: %2px)'.format(conf[i].minWidth,conf[i].maxWidth);var mediaQuery=window.matchMedia(str);(function(index)
+{mediaQuery.addListener(function(e)
+{if(e.matches){matchFunction(conf[index]);}});})(i);if(document.documentElement.clientWidth>=conf[i].minWidth&&document.documentElement.clientWidth<conf[i].maxWidth){matchFunction(conf[i]);}}
+function matchFunction(rule)
+{if(typeof rule.width==='number'){if(obj.get('textAccessible')){obj.canvas.parentNode.style.width=rule.width+'px';}
+obj.canvas.width=rule.width;obj.canvas.__rgraph_aa_translated__=false;}
+if(typeof rule.height==='number'){if(obj.get('textAccessible')){obj.canvas.parentNode.style.height=rule.height+'px';}
+obj.canvas.height=rule.height;obj.canvas.__rgraph_aa_translated__=false;}
+if(typeof rule.options==='object'){for(var j in rule.options){if(typeof j==='string'){obj.set(j,rule.options[j]);}}}
+var setCSS=function(el,name,value)
+{var replacements=[['float','cssFloat']];for(var i=0;i<replacements.length;++i){if(name===replacements[i][0]){name=replacements[i][1];}}
+el.style[name]=value;};if(typeof rule.css==='object'){for(var j in rule.css){if(typeof j==='string'){if(obj.get('textAccessible')){setCSS(obj.canvas.parentNode,j,rule.css[j]);}else{setCSS(obj.canvas,j,rule.css[j]);}}}}
+if(typeof rule.parentCss==='object'){for(var j in rule.parentCss){if(typeof j==='string'){if(obj.get('textAccessible')){setCSS(obj.canvas.parentNode.parentNode,j,rule.parentCss[j]);}else{setCSS(obj.canvas.parentNode,j,rule.parentCss[j])}}}}
+RGraph.cache=[];RGraph.resetColorsToOriginalValues(obj);if(obj.get('textAccessible')&&RGraph.text.domNodeCache&&RGraph.text.domNodeCache.reset){RGraph.text.domNodeCache.reset(obj.canvas);}
+RGraph.redraw(obj.canvas);if(typeof rule.callback==='function'){(rule.callback)(obj);}}
+return obj;};RGraph.responsive_old=function(conf)
+{var args=arguments[1]||{},obj=this,func=null,timer=null;args.delay=typeof args.delay==='number'?args.delay:200;var func=function()
+{var matched=false;for(var i=0;i<conf.length;++i){if(!matched&&(document.documentElement.clientWidth<=conf[i].maxWidth||RGraph.isNull(conf[i].maxWidth))){matched=true;if(typeof conf[i].width==='number'){if(obj.get('textAccessible')){obj.canvas.parentNode.style.width=conf[i].width+'px';}
+obj.canvas.width=conf[i].width;obj.canvas.__rgraph_aa_translated__=false;}
+if(typeof conf[i].height==='number'){if(obj.get('textAccessible')){obj.canvas.parentNode.style.height=conf[i].height+'px';}
+obj.canvas.height=conf[i].height;obj.canvas.__rgraph_aa_translated__=false;}
+if(typeof conf[i].options==='object'&&typeof conf[i].options==='object'){for(var j in conf[i].options){if(typeof j==='string'){obj.set(j,conf[i].options[j]);}}}
+var setCSS=function(el,name,value)
+{var replacements=[['float','cssFloat']];for(var i=0;i<replacements.length;++i){if(name===replacements[i][0]){name=replacements[i][1];}}
+el.style[name]=value;};if(typeof conf[i].css==='object'){for(var j in conf[i].css){if(typeof j==='string'){if(obj.get('textAccessible')){setCSS(obj.canvas.parentNode,j,conf[i].css[j]);}else{setCSS(obj.canvas,j,conf[i].css[j]);}}}}
+if(typeof conf[i].parentCss==='object'){for(var j in conf[i].parentCss){if(typeof j==='string'){if(obj.get('textAccessible')){setCSS(obj.canvas.parentNode.parentNode,j,conf[i].parentCss[j]);}else{setCSS(obj.canvas.parentNode,j,conf[i].parentCss[j])}}}}
+RGraph.cache=[];RGraph.resetColorsToOriginalValues(obj);if(obj.get('textAccessible')){RGraph.text.domNodeCache.reset(obj.canvas);}
+RGraph.redraw();if(typeof conf[i].callback==='function'){(conf[i].callback)(obj);}}}}
+RGraph.responsive.window_resize_event_listener=function()
+{if(args.delay>0){clearTimeout(timer);timer=setTimeout(func,args.delay);}else{func();}};window.addEventListener('resize',RGraph.responsive.window_resize_event_listener,false);func();return obj;};RGraph.pathObjectFunction=function()
+{if(arguments.length===1&&typeof arguments[0]==='object'){var args=RGraph.getArgs(arguments,'path,args');RGraph.path({object:this,path:args.path,args:args.args});}else{var args=Array.prototype.slice.call(arguments,1);RGraph.path({object:this,path:arguments[0],args:args});}};RGraph.drawXAxis=function(obj)
+{var properties=obj.properties,context=obj.context,tickmarksLength=(typeof properties.xaxisTickmarksLength==='number'?properties.xaxisTickmarksLength:3),isSketch=(obj.type==='bar'&&properties.variant==='sketch');if(typeof properties.xaxisLabels==='object'&&!RGraph.isNull(properties.xaxisLabels)&&properties.xaxisLabels.length){for(var i=0;i<properties.xaxisLabels.length;++i){if(typeof properties.xaxisLabels[i]==='undefined'||properties.xaxisLabels[i]===null){properties.xaxisLabels[i]='';}}}
+if((obj.type==='hbar'||obj.type==='gantt')&&properties.xaxisPosition==='bottom'){var y=obj.canvas.height-properties.marginBottom;}else if((obj.type==='hbar'||obj.type==='gantt')&&properties.xaxisPosition==='top'){var y=properties.marginTop;}else{var y=obj.getYCoord(properties.yaxisScaleMin>0?properties.yaxisScaleMin:0);}
+if(obj.type==='line'&&properties.yaxisScaleInvert&&properties.yaxisScaleMin===0){y=obj.getYCoord(obj.scale2.max);}
+if(obj.type==='scatter'&&properties.yaxisScaleInvert){if(properties.yaxisScaleMin>=0){y=obj.getYCoord(obj.scale2.max);}}
+if(obj.type==='drawing.xaxis'){if(properties.xaxisPosition==='center'){y=((obj.canvas.height-properties.marginTop-properties.marginBottom)/2)+properties.marginTop;}else{y=obj.y;}}
+if(properties.xaxis){obj.path('lw % b m % % l % % s %',properties.xaxisLinewidth,properties.marginLeft-(isSketch?5:0),y-(isSketch?2:0),obj.canvas.width-properties.marginRight+(isSketch?7:0),y+(isSketch?2:0),properties.xaxisColor);if(!isSketch){if(properties.xaxisTickmarks){if(typeof properties.xaxisTickmarksCount==='number'){var xaxisTickmarksCount=properties.xaxisTickmarksCount;}else if(obj.type==='bar'){var xaxisTickmarksCount=obj.data.length||10;}else if(obj.type==='hbar'){var xaxisTickmarksCount=(properties.xaxisLabelsCount||5);}else if(obj.type==='line'){var xaxisTickmarksCount=obj.data[0].length>0?obj.data[0].length-1:10;}else if(obj.type==='scatter'&&properties.scale){var xaxisTickmarksCount=5;}else if(obj.type==='scatter'&&properties.xaxisLabels){var xaxisTickmarksCount=properties.xaxisLabels.length;}else if(obj.type==='scatter'){var xaxisTickmarksCount=5;}else if(obj.type==='waterfall'){var xaxisTickmarksCount=obj.data.length+(properties.total?1:0);}else if(obj.type==='drawing.xaxis'){if(properties.scale){var xaxisTickmarksCount=properties.xaxisScaleLabelsCount;}else if(properties.xaxisLabels&&properties.xaxisLabels.length){var xaxisTickmarksCount=properties.xaxisLabels.length;}else{var xaxisTickmarksCount=5;}}else{xaxisTickmarksCount=5;}}else{properties.xaxisTickmarksCount=0;}
+if(properties.xaxisPosition==='center'&&properties.yaxisScaleMin>=0){if(properties.yaxisScaleInvert){var tickmarksYStart=obj.getYCoord(properties.yaxisScaleMax)-tickmarksLength;var tickmarksYEnd=obj.getYCoord(properties.yaxisScaleMax)+tickmarksLength;}else{var tickmarksYStart=obj.getYCoord(properties.yaxisScaleMin)-tickmarksLength;var tickmarksYEnd=obj.getYCoord(properties.yaxisScaleMin)+tickmarksLength;}}else if(properties.xaxisPosition==='center'||properties.yaxisScaleMin<0){if(properties.yaxisScaleInvert){var tickmarksYStart=obj.getYCoord(obj.scale2.max)-tickmarksLength;var tickmarksYEnd=obj.getYCoord(obj.scale2.max)+tickmarksLength;}else{var tickmarksYStart=obj.getYCoord(0)-tickmarksLength;var tickmarksYEnd=obj.getYCoord(0)+tickmarksLength;}
+if(properties.yaxisScaleMin<0&&properties.yaxisScaleMax>0){var tickmarksYStart=obj.getYCoord(0)-tickmarksLength;var tickmarksYEnd=obj.getYCoord(0)+tickmarksLength;}}else if(properties.xaxisPosition==='top'){if(obj.getYCoord){var tickmarksYStart=obj.getYCoord(0)-tickmarksLength;var tickmarksYEnd=obj.getYCoord(0);}else{var tickmarksYStart=properties.marginTop-tickmarksLength;var tickmarksYEnd=properties.marginTop;}}else{if(obj.getYCoord){if(obj.type==='line'&&properties.yaxisScaleInvert){var tickmarksYStart=obj.getYCoord(obj.scale2.max);var tickmarksYEnd=obj.getYCoord(obj.scale2.max)+tickmarksLength;}else if(obj.type==='scatter'&&properties.yaxisScaleInvert){var tickmarksYStart=obj.getYCoord(obj.scale2.max);var tickmarksYEnd=obj.getYCoord(obj.scale2.max)+tickmarksLength;}else if(obj.type==='drawing.xaxis'){tickmarksYStart=obj.y;tickmarksYEnd=obj.y+tickmarksLength;}else{var tickmarksYStart=obj.getYCoord(properties.yaxisScaleMin);var tickmarksYEnd=obj.getYCoord(properties.yaxisScaleMin)+tickmarksLength;}}else{var tickmarksYStart=obj.canvas.height-properties.marginBottom;var tickmarksYEnd=obj.canvas.height-properties.marginBottom+tickmarksLength;}}
+for(var i=0;i<=xaxisTickmarksCount;++i){if(RGraph.isNull(properties.xaxisTickmarksLastLeft)){if(i===0&&properties.yaxis&&properties.yaxisPosition==='left'&&!(properties.xaxisScaleMax>0&&properties.xaxisScaleMin<0)){continue;}}else if(i===0&&!properties.xaxisTickmarksLastLeft){continue;}
+if(RGraph.isNull(properties.xaxisTickmarksLastRight)){if(i===xaxisTickmarksCount&&properties.yaxis&&properties.yaxisPosition==='right'){continue;}}else if(i===xaxisTickmarksCount&&!properties.xaxisTickmarksLastRight){continue;}
+var x=(((obj.canvas.width-properties.marginLeft-properties.marginRight)/xaxisTickmarksCount)*i)+properties.marginLeft;if(obj.type==='hbar'){if(properties.yaxisPosition==='center'&&x>obj.getXCoord(0)-2&&x<obj.getXCoord(0)+2){continue;}else if(properties.yaxisPosition==='left'&&properties.xaxisScaleMin<0&&properties.xaxisScaleMax>0&&x>obj.getXCoord(0)-2&&x<obj.getXCoord(0)+2){continue;}}
+obj.path('b m % % l % % s %',x,tickmarksYStart,x,tickmarksYEnd,properties.xaxisColor);}}}
+if(properties.xaxisLabelsAngle!=0){var valign='center';var halign='right';var angle=0-properties.xaxisLabelsAngle;if(properties.xaxisPosition==='top'){var angle=properties.xaxisLabelsAngle;}}else{var valign='top';var halign='center';var angle=0;}
+if(properties.xaxisScale){var scale=obj.scale2;if(obj.type==='scatter'){scale=obj.xscale2;}else if(obj.type==='drawing.xaxis'){if(properties.xaxisScale){scale=RGraph.getScale({object:this,options:{'scale.max':properties.xaxisScaleMax,'scale.min':properties.xaxisScaleMin,'scale.decimals':Number(properties.xaxisScaleDecimals),'scale.point':properties.xaxisScalePoint,'scale.thousand':properties.xaxisScaleThousand,'scale.round':properties.xaxisScaleRound,'scale.units.pre':properties.xaxisScaleUnitsPre,'scale.units.post':properties.xaxisScaleUnitsPost,'scale.labels.count':properties.xaxisScaleLabelsCount,'scale.strict':true}});for(var i=0;i<=properties.xaxisScaleLabelsCount;++i){var original=(((properties.xaxisScaleMax-properties.xaxisScaleMin)/properties.xaxisScaleLabelsCount)*i)+properties.xaxisScaleMin;var hmargin=properties.marginInner;if(typeof properties.xaxisScaleFormatter==='function'){var text=(properties.xaxisScaleFormatter)(this,original)}else{text=RGraph.numberFormat({object:obj,number:original.toFixed(original===0?0:properties.xaxisScaleDecimals),unitspre:properties.xaxisScaleUnitsPre,unitspost:properties.xaxisScaleUnitsPost,point:properties.xaxisScalePoint,thousand:properties.xaxisScaleThousand});}}}}
+for(var i=0;i<scale.labels.length;++i){var section=(obj.canvas.width-properties.marginLeft-properties.marginRight)/scale.labels.length;if(properties.yaxisPosition==='right'){var x=properties.marginLeft+(section*i);}else if(properties.yaxisPosition==='center'){section/=2;var x=obj.getXCoord(0)+section+(section*i);}else{var x=properties.marginLeft+(section*i)+section;}
+var y=properties.xaxisPosition==='top'?obj.marginTop-(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety-5:(obj.canvas.height-properties.marginBottom)+(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety+5;if(obj.type==='drawing.xaxis'){if(properties.xaxisPosition==='top'){y=obj.y-(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety;}else{y=obj.y+(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety+5;}}
+RGraph.text({object:obj,textConfPrefix:'xaxisLabels',x:x+properties.xaxisLabelsOffsetx,y:y,text:typeof properties.xaxisScaleFormatter==='function'?(properties.xaxisScaleFormatter)({object:obj,number:scale.values[i]}):(properties.yaxisPosition==='right'?String(scale.labels[scale.labels.length-1-i]):String(scale.labels[i])),valign:typeof properties.xaxisLabelsValign==='string'?properties.xaxisLabelsValign:(properties.xaxisPosition==='top'?'bottom':valign),halign:typeof properties.xaxisLabelsHalign==='string'?properties.xaxisLabelsHalign:halign,marker:false,angle:angle,tag:'xaxis.labels'});if(obj.type==='hbar'&&properties.yaxisPosition==='center'){x=obj.getXCoord(0)-section-(section*i);RGraph.text({object:obj,textConfPrefix:'xaxisLabels',x:x+properties.xaxisLabelsOffsetx,y:properties.xaxisPosition==='top'?obj.marginTop-(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety-5:(obj.canvas.height-properties.marginBottom)+(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety+5,text:typeof properties.xaxisScaleFormatter==='function'?(properties.xaxisScaleFormatter)({object:obj,number:scale.values[i]}):'-'+String(scale.labels[i]),valign:typeof properties.xaxisLabelsValign==='string'?properties.xaxisLabelsValign:(properties.xaxisPosition==='top'?'bottom':valign),halign:typeof properties.xaxisLabelsHalign==='string'?properties.xaxisLabelsHalign:halign,marker:false,angle:angle,tag:'xaxis.labels'});}
+var str=((properties.xaxisScaleUnitsPre||'')+(properties.xaxisScaleMin||0).toFixed(properties.xaxisScaleDecimals).replace(/\./,properties.xaxisScalePoint)+(properties.xaxisScaleUnitsPost||''));str=str.replace(/^(.+)-(\d)/,'-$1$2');RGraph.text({object:obj,textConfPrefix:'xaxisLabels',x:properties.yaxisPosition==='right'?obj.canvas.width-properties.marginRight+properties.xaxisLabelsOffsetx:(properties.yaxisPosition==='center'?obj.getXCoord(0)+properties.xaxisLabelsOffsetx:properties.marginLeft+properties.xaxisLabelsOffsetx),y:y,text:typeof properties.xaxisScaleFormatter==='function'?(properties.xaxisScaleFormatter)({object:obj,number:0}):str,valign:typeof properties.xaxisLabelsValign==='string'?properties.xaxisLabelsValign:(typeof properties.xaxisLabelsValign==='string'?properties.xaxisLabelsValign:(properties.xaxisPosition==='top'?'bottom':valign)),halign:typeof properties.xaxisLabelsHalign==='string'?properties.xaxisLabelsHalign:halign,marker:false,angle:angle,tag:'xaxis.labels'});}}else if(properties.xaxisLabels&&properties.xaxisLabels.length&&(properties.xaxisLabelsPosition==='section'||properties.xaxisLabelsPosition==='edge')){if(properties.xaxisLabelsPosition==='edge'){var section=(obj.canvas.width-properties.marginLeft-properties.marginRight-(properties.marginInner||0)-(properties.marginInner||0))/(properties.xaxisLabels.length-1);}else{var section=(obj.canvas.width-properties.marginLeft-properties.marginRight)/properties.xaxisLabels.length;}
+for(var i=0;i<properties.xaxisLabels.length;++i){if(properties.xaxisLabelsPosition==='edge'){var x=properties.marginLeft+(properties.marginInner||0)+(section*i);}else{var x=properties.marginLeft+(section*i)+(section/2);}
+if(typeof properties.xaxisLabels[i]==='object'&&obj.type==='scatter'){var rightEdge=0;var align=properties.xaxisLabelsSpecificAlign==='left'?'left':'center';var halign='center'
+if(properties.xaxisLabels[i+1]&&typeof properties.xaxisLabels[i+1][1]==='number'){rightEdge=properties.xaxisLabels[i+1][1];}else{rightEdge=properties.xaxisScaleMax;}
+var leftEdge=properties.xaxisLabels[i][1];var x=((obj.getXCoord(rightEdge)-obj.getXCoord(leftEdge))/2)+obj.getXCoord(leftEdge);if(align==='left'){x=obj.getXCoord(leftEdge);halign='left';}
+if(RGraph.isNull(x)){continue;}
+if(obj.type==='drawing.xaxis'){if(properties.xaxisPosition==='top'){y=obj.y-(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety;}else{y=obj.y+(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety+5;}}
+var ret=RGraph.text({object:obj,textConfPrefix:'xaxisLabels',x:x+5+properties.xaxisLabelsOffsetx,y:y+5+properties.xaxisLabelsOffsety,valign:valign,halign:angle!=0?'right':halign,text:String(properties.xaxisLabels[i][0]),angle:angle,marker:false,tag:'labels.specific',cssClass:RGraph.getLabelsCSSClassName({object:obj,name:'xaxisLabelsClass',index:i})});obj.path('b m % % l % % s #bbb',Math.round(properties.marginLeft+(((properties.xaxisLabels[i][1]-properties.xaxisScaleMin)/(properties.xaxisScaleMax-properties.xaxisScaleMin))*(obj.canvas.width-properties.marginLeft-properties.marginRight))),obj.canvas.height-properties.marginBottom,Math.round(properties.marginLeft+(((properties.xaxisLabels[i][1]-properties.xaxisScaleMin)/(properties.xaxisScaleMax-properties.xaxisScaleMin)))*(obj.canvas.width-properties.marginLeft-properties.marginRight)),obj.canvas.height-properties.marginBottom+20);if(i===properties.xaxisLabels.length-1){obj.path('b m % % l % % s #bbb',obj.canvas.width-properties.marginRight,obj.canvas.height-properties.marginBottom,obj.canvas.width-properties.marginRight,obj.canvas.height-properties.marginBottom+20);}}else{var y=properties.xaxisPosition==='top'?properties.marginTop+properties.xaxisLabelsOffsety-5:(obj.canvas.height-properties.marginBottom)+properties.xaxisLabelsOffsety+5;if(obj.type==='drawing.xaxis'){if(obj.type==='drawing.xaxis'){if(properties.xaxisPosition==='top'){y=obj.y-(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety;}else{y=obj.y+(properties.xaxisTickmarksLength||0)+properties.xaxisLabelsOffsety+5;}}}
+var ret=RGraph.text({object:obj,textConfPrefix:'xaxisLabels',x:x+properties.xaxisLabelsOffsetx,y:y+properties.xaxisLabelsOffsety,text:String(properties.xaxisLabels[i]),valign:typeof properties.xaxisLabelsValign==='string'?properties.xaxisLabelsValign:(properties.xaxisPosition==='top'?'bottom':valign),halign:typeof properties.xaxisLabelsHalign==='string'?properties.xaxisLabelsHalign:halign,marker:false,angle:angle,tag:'xaxis.labels',cssClass:RGraph.getLabelsCSSClassName({object:obj,name:'xaxisLabelsClass',index:i})});}}}
+if(properties.xaxisTitle){var x=properties.marginLeft+((obj.canvas.width-properties.marginLeft-properties.marginRight)/2)+properties.xaxisTitleOffsetx;var y=properties.xaxisPosition==='top'?properties.marginTop-7+properties.xaxisTitleOffsety-properties.xaxisTickmarksLength:obj.canvas.height-properties.marginBottom+7+properties.xaxisTitleOffsety+properties.xaxisTickmarksLength;if(obj.type==='drawing.xaxis'){y=obj.y+7+properties.xaxisTitleOffsety+properties.xaxisTickmarksLength;}
+if(properties.xaxisScale||(properties.xaxisLabels&&properties.xaxisLabels.length)){var textConf=RGraph.getTextConf({object:obj,prefix:'xaxisLabels'});if(properties.xaxisPosition==='top'){y-=textConf.size*1.5;}else{y+=textConf.size*1.5;}}
+if(typeof properties.xaxisTitlePos==='number'){if(properties.xaxisPosition==='top'){y=properties.marginTop*properties.xaxisTitlePos;}else{y=obj.canvas.height-properties.marginBottom+(properties.marginBottom*properties.xaxisTitlePos);}}
+if(typeof properties.xaxisTitleX==='number')x=properties.xaxisTitleX;if(typeof properties.xaxisTitleY==='number')y=properties.xaxisTitleY;RGraph.text({object:obj,textConfPrefix:'xaxisTitle',x:x,y:y,text:properties.xaxisTitle.toString(),valign:properties.xaxisPosition==='top'?(properties.xaxisTitleValign||'bottom'):(properties.xaxisTitleValign||'top'),halign:properties.xaxisTitleHalign||'center',marker:false,tag:'xaxis.title'});}};RGraph.drawYAxis=function(obj)
+{var properties=obj.properties,context=obj.context,isSketch=obj.type==='bar'&&properties.variant==='sketch';tickmarksLength=typeof properties.yaxisTickmarksLength==='number'?properties.yaxisTickmarksLength:3;if(obj.type==='hbar'){properties.yaxisLabelsSpecific=properties.yaxisLabels;}
+if((obj.type==='hbar'||obj.type==='gantt')&&properties.yaxisPosition==='left'){var x=obj.getXCoord(0);if(obj.type==='hbar'&&properties.xaxisScaleMin>0&&properties.xaxisScaleMax>properties.xaxisScaleMin){var x=obj.getXCoord(properties.xaxisScaleMin);}}else if((obj.type==='hbar'||obj.type==='gantt')&&properties.yaxisPosition==='right'){var x=obj.canvas.width-properties.marginRight;}else if(obj.type==='drawing.yaxis'){var x=obj.x;}else{var x=properties.yaxisPosition==='right'?obj.canvas.width-properties.marginRight:(obj.type==='hbar'?obj.getXCoord(0):properties.marginLeft);}
+if(properties.yaxis){obj.path('lw % b m % % l % % s %',properties.yaxisLinewidth,x-(isSketch?5:0),properties.marginTop-(isSketch?2:0),x+(isSketch?7:0),obj.canvas.height-properties.marginBottom+(isSketch?2:0),properties.yaxisColor);if(!isSketch){if(properties.yaxisTickmarks){if(typeof properties.yaxisTickmarksCount==='number'){var yaxisTickmarksCount=properties.yaxisTickmarksCount;}else if(obj.type==='bar'){var yaxisTickmarksCount=properties.yaxisLabelsSpecific?properties.yaxisLabelsSpecific.length-1:properties.yaxisLabelsCount;}else if(obj.type==='hbar'){var yaxisTickmarksCount=obj.data.length||5;}else if(obj.type==='line'){var yaxisTickmarksCount=properties.yaxisLabelsSpecific?properties.yaxisLabelsSpecific.length-1:properties.yaxisLabelsCount;}else if(obj.type==='scatter'){var yaxisTickmarksCount=properties.yaxisLabelsCount;}else if(obj.type==='waterfall'){var yaxisTickmarksCount=properties.yaxisLabelsCount;}else{yaxisTickmarksCount=5;}}else{properties.yaxisTickmarksCount=0;}
+if(properties.yaxisPosition==='right'){var tickmarksXStart=x;var tickmarksXEnd=x+tickmarksLength;}else{var tickmarksXStart=x;var tickmarksXEnd=x-tickmarksLength;}
+if(obj.type==='hbar'&&properties.xaxisScaleMin<0&&properties.xaxisScaleMax>0){var tickmarksXStart=obj.getXCoord(0)-tickmarksLength;var tickmarksXEnd=obj.getXCoord(0)+tickmarksLength;}
+for(var i=0;i<=yaxisTickmarksCount;++i){if(RGraph.isNull(properties.yaxisTickmarksLastTop)){if(i===0&&properties.xaxis&&properties.xaxisPosition==='top'){continue;}}else if(i===0&&!properties.yaxisTickmarksLastTop){continue;}
+if(RGraph.isNull(properties.yaxisTickmarksLastBottom)){if(i===yaxisTickmarksCount&&properties.xaxis&&properties.xaxisPosition==='bottom'){continue;}}else if(i===yaxisTickmarksCount&&!properties.yaxisTickmarksLastBottom){continue;}
+var y=(((obj.canvas.height-properties.marginTop-properties.marginBottom)/yaxisTickmarksCount)*i)+properties.marginTop;if(obj.getYCoord){var xaxisYCoord=obj.getYCoord(0);}else if(obj.getXCoord){var xaxisYCoord=obj.getXCoord(0);}else{var xaxisYCoord=obj.marginTop;}
+if(properties.xaxis&&(properties.xaxisPosition==='center'||(properties.xaxisPosition==='bottom'&&properties.yaxisScaleMin<0&&properties.yaxisScaleMax>0))&&y>(xaxisYCoord-1)&&y<(xaxisYCoord+1)){continue;}
+obj.path('b m % % l % % s %',tickmarksXStart,y,tickmarksXEnd,y,properties.yaxisColor);if(properties.yaxisScaleMin<0&&properties.yaxisScaleMax>0){obj.path('b m % % l % % s %',tickmarksXStart,obj.canvas.height-properties.marginBottom,tickmarksXEnd,obj.canvas.height-properties.marginBottom,properties.yaxisColor);}
+if(obj.type==='scatter'&&properties.xaxisPosition==='center'&&properties.yaxisScaleInvert){obj.path('b m % % l % % s %',tickmarksXStart,properties.marginTop,tickmarksXEnd,properties.marginTop,properties.yaxisColor);}}}}
+var valign='center',halign='right',angle=0;if(properties.yaxisScale&&!properties.yaxisLabelsSpecific){if(obj.type==='drawing.yaxis'){if(properties.yaxisScale){obj.scale2=RGraph.getScale({object:obj,options:{'scale.max':properties.yaxisScaleMax,'scale.min':properties.yaxisScaleMin,'scale.decimals':Number(properties.yaxisScaleDecimals),'scale.point':properties.yaxisScalePoint,'scale.thousand':properties.yaxisScaleThousand,'scale.round':properties.yaxisScaleRound,'scale.units.pre':properties.yaxisScaleUnitsPre,'scale.units.post':properties.yaxisScaleUnitsPost,'scale.labels.count':properties.yaxisScaleLabelsCount,'scale.strict':true}});for(var i=0;i<=properties.yaxisScaleLabelsCount;++i){var original=(((properties.yaxisScaleMax-properties.yaxisScaleMin)/properties.yaxisScaleLabelsCount)*i)+properties.yaxisScaleMin;var hmargin=properties.marginInner;if(typeof properties.yaxisScaleFormatter==='function'){var text=(properties.yaxisScaleFormatter)(this,original)}else{text=RGraph.numberFormat({object:obj,number:original.toFixed(original===0?0:properties.yaxisScaleDecimals),unitspre:properties.yaxisScaleUnitsPre,unitspost:properties.yaxisScaleUnitsPost,point:properties.yaxisScalePoint,thousand:properties.yaxisScaleThousand});}}}}
+var scale=obj.scale2;obj.maxLabelLength=Math.max(obj.maxLabelLength,obj.context.measureText(obj.scale2.labels[4]).width);if(properties.xaxisPosition==='center'){var halfHeight=((obj.canvas.height-properties.marginTop-properties.marginBottom)/2);for(var i=0;i<scale.labels.length;++i){var section=(obj.canvas.height-properties.marginTop-properties.marginBottom)/(scale.labels.length*2);var y=properties.marginTop+(section*i);RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx+5:x-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx-5,y:properties.yaxisScaleInvert?halfHeight+properties.marginTop-(section*i)+properties.yaxisLabelsOffsety:properties.marginTop+(section*i)+properties.yaxisLabelsOffsety,text:String(scale.labels[scale.labels.length-1-i]),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}
+for(var i=0;i<scale.labels.length;++i){if(i===0&&properties.yaxisScaleInvert)continue;var section=(obj.canvas.height-properties.marginTop-properties.marginBottom)/(scale.labels.length*2);var y=properties.marginTop+((obj.canvas.height-properties.marginTop-properties.marginBottom)/2)+(section*i)+section;RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx+5:x-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx-5,y:properties.yaxisScaleInvert?halfHeight+properties.marginTop+(section*i):y+properties.yaxisLabelsOffsety,text:'-'+(properties.yaxisScaleInvert?String(scale.labels[scale.labels.length-i-1]):String(scale.labels[i])),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}
+RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+5+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx:x-5-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx,y:properties.yaxisScaleInvert?properties.marginTop+properties.yaxisLabelsOffsety:properties.marginTop+((obj.canvas.height-properties.marginBottom-properties.marginTop)/2)+properties.yaxisLabelsOffsety,text:typeof properties.yaxisScaleFormatter==='function'?(properties.yaxisScaleFormatter)({object:this,number:0,unitspre:properties.yaxisScaleUnitsPre,unitspost:properties.yaxisScaleUnitsPost,point:properties.yaxisScalePoint,thousand:properties.yaxisScaleThousand,formatter:properties.yaxisScaleFormatter}):(properties.yaxisScaleUnitsPre||'')+properties.yaxisScaleMin.toFixed(properties.yaxisScaleDecimals).replace(/\./,properties.yaxisScalePoint)+(properties.yaxisScaleUnitsPost||''),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});if(properties.yaxisScaleInvert){RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+5+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx:x-5-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx,y:obj.canvas.height-properties.marginBottom+properties.yaxisLabelsOffsety,text:typeof properties.yaxisScaleFormatter==='function'?(properties.yaxisScaleFormatter)({object:this,number:0,unitspre:properties.yaxisScaleUnitsPre,unitspost:properties.yaxisScaleUnitsPost,point:properties.yaxisScalePoint,thousand:properties.yaxisScaleThousand,formatter:properties.yaxisScaleFormatter}):(properties.yaxisScaleUnitsPre||'')+properties.yaxisScaleMin.toFixed(properties.yaxisScaleDecimals).replace(/\./,properties.yaxisScalePoint)+(properties.yaxisScaleUnitsPost||''),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}}else if(properties.xaxisPosition==='top'){for(var i=0;i<scale.labels.length;++i){var section=(obj.canvas.height-properties.marginTop-properties.marginBottom)/scale.labels.length;if(properties.yaxisScaleInvert){var y=obj.canvas.height-properties.marginBottom-(section*i)-section-section;}else{var y=properties.marginTop+(section*i);}
+RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx+5:x-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx-5,y:y+section+properties.yaxisLabelsOffsety,text:'-'+String(scale.labels[i]),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}
+RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+5+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx:x-5-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx,y:properties.yaxisScaleInvert?obj.canvas.height-properties.marginBottom+properties.yaxisLabelsOffsety:properties.marginTop+properties.yaxisLabelsOffsety,text:typeof properties.yaxisScaleFormatter==='function'?(properties.yaxisScaleFormatter)({object:this,number:0,unitspre:properties.yaxisScaleUnitsPre,unitspost:properties.yaxisScaleUnitsPost,point:properties.yaxisScalePoint,thousand:properties.yaxisScaleThousand,formatter:properties.yaxisScaleFormatter}):(properties.yaxisScaleUnitsPre||'')+properties.yaxisScaleMin.toFixed(properties.yaxisScaleDecimals).replace(/\./,properties.yaxisScalePoint)+(properties.yaxisScaleUnitsPost||''),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}else{for(var i=0;i<scale.labels.length;++i){var section=(obj.canvas.height-properties.marginTop-properties.marginBottom)/scale.labels.length;var y=properties.marginTop+(section*(i+(properties.yaxisScaleInvert?1:0)));RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx+5:x-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx-5,y:y+properties.yaxisLabelsOffsety,text:String(properties.yaxisScaleInvert?scale.labels[i]:scale.labels[scale.labels.length-1-i]),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}
+var zerolabel=RGraph.numberFormat({object:obj,number:properties.yaxisScaleMin.toFixed(properties.yaxisScaleDecimals),unitspre:properties.yaxisScaleUnitsPre,unitspost:properties.yaxisScaleUnitsPost,point:properties.yaxisScalePoint,thousand:properties.yaxisScaleThousand});RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:properties.yaxisPosition==='right'?x+5+(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx:x-5-(properties.yaxisTickmarksLength||0)+properties.yaxisLabelsOffsetx,y:properties.yaxisScaleInvert?properties.marginTop:obj.canvas.height-properties.marginBottom+properties.yaxisLabelsOffsety,text:typeof properties.yaxisScaleFormatter==='function'?(properties.yaxisScaleFormatter)({object:this,number:0,unitspre:properties.yaxisScaleUnitsPre,unitspost:properties.yaxisScaleUnitsPost,point:properties.yaxisScalePoint,thousand:properties.yaxisScaleThousand,formatter:properties.yaxisScaleFormatter}):zerolabel,valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:valign,halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':halign),marker:false,angle:angle,tag:'yaxis.labels'});}}else if(properties.yaxisLabelsSpecific&&properties.yaxisLabelsSpecific.length&&(properties.yaxisLabelsPosition==='section'||properties.yaxisLabelsPosition==='edge')){var section=(obj.canvas.height-properties.marginTop-properties.marginBottom)/(properties.yaxisLabelsSpecific.length-(properties.yaxisLabelsPosition==='section'?0:1));obj.maxLabelLength=0;for(var i=0;i<properties.yaxisLabelsSpecific.length;++i){var y=properties.marginTop+(section*i)+(properties.yaxisLabelsPosition==='section'?section/2:0);var ret=RGraph.text({object:obj,textConfPrefix:'yaxisLabels',x:obj.type==='drawing.yaxis'?(properties.yaxisPosition==='right'?obj.x+7+properties.yaxisLabelsOffsetx:obj.x-5+properties.yaxisLabelsOffsetx):(properties.yaxisPosition==='right'?x+properties.yaxisLabelsOffsetx+5:properties.marginLeft-5+properties.yaxisLabelsOffsetx),y:y+properties.yaxisLabelsOffsety,text:String(properties.yaxisLabelsSpecific[i]||''),valign:typeof properties.yaxisLabelsValign==='string'?properties.yaxisLabelsValign:'center',halign:typeof properties.yaxisLabelsHalign==='string'?properties.yaxisLabelsHalign:(properties.yaxisPosition==='right'?'left':'right'),marker:false,tag:'yaxis.labels',cssClass:RGraph.getLabelsCSSClassName({object:obj,name:'yaxisLabelsClass',index:i})});obj.maxLabelLength=Math.max(obj.maxLabelLength,obj.context.measureText(String(properties.yaxisLabelsSpecific[i])).width*2);}}
+if(properties.yaxisTitle){if(obj.type==='gantt'){for(var i=0,maxLabelLength=0;i<properties.yaxisLabels.length;++i){var textConf=RGraph.getTextConf({object:obj,prefix:'yaxisLabels'});maxLabelLength=Math.max(maxLabelLength,RGraph.measureText(properties.yaxisLabels[i],textConf.bold,textConf.font,textConf.size)[0]);}}else if(obj.scale2&&obj.scale2.labels){var textConf=RGraph.getTextConf({object:obj,prefix:'yaxisLabels'});var maxLabelLength=RGraph.measureText(obj.scale2.labels[obj.scale2.labels.length-1],textConf.bold,textConf.font,textConf.size)[0];}
+if((obj.type==='hbar'&&properties.yaxisLabels&&properties.yaxisLabels.length)||(obj.type==='drawing.yaxis'&&properties.yaxisLabelsSpecific&&properties.yaxisLabelsSpecific.length)){maxLabelLength=(function(labels)
+{var textConf=RGraph.getTextConf({object:obj,prefix:'yaxisLabels'});for(var i=0,max=0;i<labels.length;++i){var dim=RGraph.measureText(labels[i],textConf.bold,textConf.font,textConf.size);max=Math.max(max,dim[0]);}
+return max;})(obj.type==='drawing.yaxis'?properties.yaxisLabelsSpecific:properties.yaxisLabels);}
+var x=properties.yaxisPosition==='right'?(obj.canvas.width-properties.marginRight)+5+maxLabelLength+10:properties.marginLeft-5-maxLabelLength-10;var y=((obj.canvas.height-properties.marginTop-properties.marginBottom)/2)+properties.marginTop;if(obj.type==='drawing.yaxis'){var x=properties.yaxisPosition==='right'?obj.x+5+maxLabelLength+10:obj.x-5-maxLabelLength-10;}
+if(typeof properties.yaxisTitlePos==='number'){if(properties.yaxisPosition==='right'){x=obj.canvas.width-(properties.marginRight*properties.yaxisTitlePos);}else{x=properties.marginLeft*properties.yaxisTitlePos;}}
+if(typeof properties.yaxisTitleOffsetx==='number')x+=properties.yaxisTitleOffsetx;if(typeof properties.yaxisTitleOffsety==='number')y+=properties.yaxisTitleOffsety;if(typeof properties.yaxisTitleX==='number')x=properties.yaxisTitleX;if(typeof properties.yaxisTitleY==='number')y=properties.yaxisTitleY;RGraph.text({object:obj,textConfPrefix:'yaxisTitle',x:x,y:y,text:properties.yaxisTitle.toString(),valign:properties.yaxisTitleValign||'bottom',halign:properties.yaxisTitleHalign||'center',marker:false,accessible:typeof properties.yaxisTitleAccessible==='boolean'?properties.yaxisTitleAccessible:undefined,angle:-45,angle:properties.yaxisPosition==='right'?90:-90,tag:'yaxis.title'});}};RGraph.getLabelsCSSClassName=function()
+{var args=RGraph.getArgs(arguments,'object,name,index');var properties=args.object.properties;var value='';if(typeof properties[args.name]==='string'){value=properties[args.name];}else{if(typeof properties[args.name]==='object'&&typeof properties[args.name][args.index]==='string'){value=properties[args.name][args.index];}}
+return value;};RGraph.labelSubstitution=function(args)
+{var text=String(args.text);if(!text.match(/%{.*?}/)){return text;}
+var text=text.replace(/%%/g,'___--PERCENT--___');text=text.replace(/%{index}/g,args.index);var reg=/%{prop(?:erty)?:([_a-z0-9]+)\[([0-9]+)\]}/i;while(text.match(reg)){var property=RegExp.$1,index=parseInt(RegExp.$2);if(args.object.properties[property]){text=text.replace(reg,args.object.properties[property][index]||'');}else{text=text.replace(reg,'');}
+RegExp.lastIndex=null;}
+while(text.match(/%{property:([_a-z0-9]+)}/i)){var str='%{property:'+RegExp.$1+'}';text=text.replace(str,args.object.properties[RegExp.$1]);}
+while(text.match(/%{prop:([_a-z0-9]+)}/i)){var str='%{prop:'+RegExp.$1+'}';text=text.replace(str,args.object.properties[RegExp.$1]);}
+while(text.match(/%{value(?:_formatted)?}/i)){var value=args.value;if(text.match(/%{value_formatted}/i)){text=text.replace('%{value_formatted}',typeof value==='number'?RGraph.numberFormat({object:args.object,number:value.toFixed(args.decimals),thousand:args.thousand||',',point:args.point||'.',unitspre:args.unitsPre||'',unitspost:args.unitsPost||''}):null);}else{text=text.replace('%{value}',value);}}
+var reg=/%{global:([_a-z0-9.]+)\[([0-9]+)\]}/i;while(text.match(reg)){var name=RegExp.$1,index=parseInt(RegExp.$2);if(eval(name)[index]){text=text.replace(reg,eval(name)[index]||'');}else{text=text.replace(reg,'');}
+RegExp.lastIndex=null;}
+var reg=/%{global:([_a-z0-9.]+)}/i;while(text.match(reg)){var name=RegExp.$1;if(eval(name)){text=text.replace(reg,eval(name)||'');}else{text=text.replace(reg,'');}
+RegExp.lastIndex=null;}
+var regexp=/%{function:([_A-Za-z0-9]+)\((.*?)\)}/;text=text.replace(/\r/,'|CR|');text=text.replace(/\n/,'|LF|');while(text.match(regexp)){var str=RegExp.$1+'('+RegExp.$2+')';for(var i=0,len=str.length;i<len;++i){str=str.replace(/\r?\n/,"\\n");}
+RGraph.Registry.set('label-templates-function-object',args.object);var func=new Function('return '+str);var ret=func();text=text.replace(regexp,ret)}
+text=text.replace(/\r?\n/g,'<br />');text=text.replace(/___--PERCENT--___/g,'%')
+text=text.replace(/\|CR\|/,'\r');text=text.replace(/\|LF\|/,'\n');return text.toString();};RGraph.splitString=function(str)
+{var re=new RegExp('(["\'a-z0-9]+) *= *','ig');str=str.replace(re,'"$1":');str=str.replace(/""/g,'"');str=str.replace(/''/g,'"');str=str.replace(/:'/g,':"');str=str.replace(/' *,/g,'",');str=str.trim().replace(/,$/,'');var ret=JSON.parse('{'+str+'}');return ret;};RGraph.GET.raw=function()
+{return location.search;};RGraph.GET.parse=function()
+{if(!RGraph.isNull(RGraph.GET.__parts__)){return RGraph.GET.__parts__;}
+var raw=RGraph.GET.raw().replace(/^\?/,'');var parts=raw.split(/\&/);for(var i=0;i<parts.length;++i){var tmp=parts[i].split('=');parts[tmp[0]]=decodeURI(tmp[1]);}
+RGraph.GET.__parts__=parts;return parts;};RGraph.GET.text=RGraph.GET.string=function(key)
+{var parts=RGraph.GET.parse();if(!parts[key]){return null;}
+return String(parts[key]);};RGraph.GET.number=function(key)
+{var parts=RGraph.GET.parse();if(!parts[key]){return null;}
+return Number(parts[key]);};RGraph.GET.json=RGraph.GET.object=function(key)
+{var parts=RGraph.GET.parse();if(!parts[key]){return null;}
+return JSON.parse(parts[key]);};RGraph.GET.list=RGraph.GET.array=function(key)
+{var parts=RGraph.GET.parse();if(!parts[key]){return null;}
+if(!arguments[1]){var sep=',';}else{var sep=arguments[1];}
+var arr=parts[key].split(sep);arr[0]=arr[0].replace(/^\[/,'');arr[arr.length-1]=arr[arr.length-1].replace(/\]$/,'');for(var i=0;i<arr.length;++i){arr[i]=arr[i].replace(/^('|")/,'');arr[i]=arr[i].replace(/('|")$/,'');if(Number(arr[i])){arr[i]=Number(arr[i]);}}
+return arr;};RGraph.clipTo={};RGraph.clipTo.start=function()
+{var args=RGraph.getArgs(arguments,'object,dimensions');RGraph.clipTo.object=args.object;if(typeof args.dimensions==='string'){if(args.dimensions==='tophalf'){args.object.path('sa b r % % % % cl',0,0,args.object.canvas.width,args.object.canvas.height/2);}else if(args.dimensions==='bottomhalf'){args.object.path('sa b r % % % % cl',0,args.object.canvas.height/2,args.object.canvas.width,args.object.canvas.height/2);}else if(args.dimensions==='lefthalf'){args.object.path('sa b r % % % % cl',0,0,args.object.canvas.width/2,args.object.canvas.height);}else if(args.dimensions==='righthalf'){args.object.path('sa b r % % % % cl',args.object.canvas.width/2,0,args.object.canvas.width/2,args.object.canvas.height);}else if(args.dimensions.match(/^((?:h|v)bar) +([-.0-9]+) ?- ?([-.0-9]+)$/i)){var type=RegExp.$1.toLowerCase(),start=parseFloat(RegExp.$2),end=parseFloat(RegExp.$3),marginTop=args.object.properties.marginTop,marginBottom=args.object.properties.marginBottom,marginLeft=args.object.properties.marginLeft,marginRight=args.object.properties.marginRight,graphWidth=args.object.canvas.width-marginLeft-marginRight,graphHeight=args.object.canvas.height-marginTop-marginBottom;if(type==='hbar'){args.object.path('sa b r % % % % cl',0,marginTop+(graphHeight*start),args.object.canvas.width,(end-start)*(args.object.canvas.height-marginTop-marginBottom));}else if(type==='vbar'){args.object.path('sa b r % % % % cl',marginLeft+(graphWidth*start),0,(end-start)*(args.object.canvas.width-marginLeft-marginRight),args.object.canvas.height);}}else{args.object.path('sa');args.object.path(args.dimensions);args.object.path('cl');}}else if(RGraph.isArray(args.dimensions)&&RGraph.isArray(args.dimensions[0])){for(var i=0,path=[];i<args.dimensions.length;++i){path.push('%1 %2 %3'.format(i===0?'m':'l',args.dimensions[i][0],args.dimensions[i][1]));}
+path='sa b '+path.join(' ')+' cl';args.object.path(path);}else if(RGraph.isArray(args.dimensions)){args.object.path('sa b r % % % % cl',args.dimensions[0],args.dimensions[1],args.dimensions[2],args.dimensions[3]);}};RGraph.clipTo.end=function()
+{RGraph.path(RGraph.clipTo.object,'rs');};RGraph.isString=function(obj){return typeof obj==='string';};RGraph.isNumber=function(obj){return typeof obj==='number';};RGraph.isBool=RGraph.isBoolean=function(obj){return typeof obj==='boolean';};RGraph.isObject=function(obj){return(obj&&typeof obj==='object'&&obj.constructor.toString().toLowerCase().indexOf('object')>0)?true:false;};RGraph.isFunction=function(obj){return typeof obj==='function';};RGraph.isUndefined=function(obj){return typeof obj==='undefined';};})(window,document);window.$p=function(v)
+{RGraph.pr(arguments[0],arguments[1],arguments[3]);};window.$a=function(v)
+{alert(v);};window.$c=window.$cl=function(v)
+{return console.log(v);};window.$d=function(m)
+{var width=600;var height=600;if(!this.rgraph_debug_textarea){this.rgraph_debug_textarea=document.createElement('textarea');this.rgraph_debug_textarea.style.position='fixed';this.rgraph_debug_textarea.style.left='10px';this.rgraph_debug_textarea.style.top='10px';this.rgraph_debug_textarea.style.width=width+'px';this.rgraph_debug_textarea.style.height=height+'px';this.rgraph_debug_textarea.style.opacity='0.25';this.rgraph_debug_textarea.style.zIndex='99999';this.rgraph_debug_textarea.style.border='2px solid black';this.rgraph_debug_textarea.style.backgroundColor='yellow'
+this.rgraph_debug_textarea.style.color='black';this.rgraph_debug_textarea.style.fontSize='16pt';this.rgraph_debug_textarea.style.fontWeight='bold';this.rgraph_debug_textarea.wrap='off';document.body.appendChild(this.rgraph_debug_textarea);if(window.localStorage.rgraph_debug_textarea_w)this.rgraph_debug_textarea.style.width=window.localStorage.rgraph_debug_textarea_w;if(window.localStorage.rgraph_debug_textarea_h)this.rgraph_debug_textarea.style.height=window.localStorage.rgraph_debug_textarea_h;this.rgraph_debug_textarea.onmouseover=function(e){e.target.style.opacity=1;};this.rgraph_debug_textarea.onmousedown=function(e){if(e.ctrlKey){e.preventDefault();e.stopPropagation();this.mousedown=true;this.pickupX=e.offsetX;this.pickupY=e.offsetY;return false;}};this.rgraph_debug_textarea.onmouseout=function(e){this.style.opacity=0.25;};this.rgraph_debug_textarea.ondblclick=function(e)
+{if(confirm('Clear the log?')){this.value='';}};window.onmouseup=function(e){this.rgraph_debug_textarea.mousedown=false;};window.addEventListener('mousemove',function(e)
+{if(this.rgraph_debug_textarea.mousedown){window.localStorage.rgraph_debug_textarea_w=this.rgraph_debug_textarea.offsetWidth+'px';window.localStorage.rgraph_debug_textarea_h=this.rgraph_debug_textarea.offsetHeight+'px';}},false);}
+var date=new Date();var hour=date.getHours();var min=date.getMinutes();min=String(min).length===1?'0'+min:min;var sec=date.getSeconds();sec=String(sec).length===1?'0'+sec:sec;function getCircularReplacer()
+{var seen=[];return function(key,value)
+{if(typeof value==='object'&&value!==null){for(var i=0;i<seen.length;++i){if(seen[i]===value){return;}}
+seen.push(value);}
+return value;};};this.rgraph_debug_textarea.value="[%1:%2:%3] %4\r\n%5".format(hour,min,sec,JSON.stringify(m,getCircularReplacer()),this.rgraph_debug_textarea.value);};String.prototype.format=function()
+{if(arguments.length===0){var s=this;if(s.match(/{[a-z0-9]+?}/i)){var s=this.replace(/{[a-z0-9]+?}/gi,function(str,idx)
+{str=str.substr(1)
+str=str.substr(0,str.length-1)
+return window[str];});}
+return s;}
+if(arguments.length===1&&RGraph.isArray(arguments[0])){return this.format.apply(this,arguments[0]);}
+var args=arguments;for(var i in args){if(RGraph.isNull(args[i])){args[i]='null';}}
+var s=this.replace(/{(\d+)}/g,function(str,idx)
+{return typeof args[idx-1]!=='undefined'?args[idx-1]:str;});s=s.replace(/(?:%|\\)%(\d)/g,'__PPEERRCCEENNTT__$1');s=s.replace(/%(\d+)/g,function(str,idx)
+{return typeof args[idx-1]!=='undefined'?args[idx-1]:str;});return s.replace('__PPEERRCCEENNTT__','%');};

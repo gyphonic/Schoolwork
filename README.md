@@ -1,5 +1,5 @@
 # Schoolwork
-Main repo for some of my schoolwork and online classwork.
+Main repo for my undergrad classwork.
 
 ## Includes:
 
